@@ -1,0 +1,49 @@
+{
+  "manifest_version": 3,
+  "name": "Table Grabber — Copy & Export Any Table to CSV, Excel, Markdown",
+  "short_name": "Table Grabber",
+  "version": "1.0.0",
+  "description": "Copy any web table to CSV, Excel, Markdown, JSON, SQL and more. Unlimited rows, no account, nothing uploaded.",
+  "author": "Bodhisatta Bhattacharjee",
+  "homepage_url": "https://glitchbong.com/tools/table-grabber",
+  "minimum_chrome_version": "116",
+
+  "permissions": ["activeTab", "scripting", "storage", "contextMenus", "downloads"],
+
+  "background": {
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
+  },
+
+  "action": {
+    "default_title": "Table Grabber — grab a table",
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["src/shared/*.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+
+  "commands": {
+    "_execute_action": {
+      "suggested_key": { "default": "Alt+Shift+T" },
+      "description": "Open Table Grabber"
+    }
+  }
+}

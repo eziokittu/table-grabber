@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Table Grabber</title>
+    <link rel="stylesheet" href="../shared/theme.css" />
+    <link rel="stylesheet" href="dashboard.css" />
+  </head>
+  <body>
+    <header class="head">
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="2.5" y="4" width="19" height="16" rx="2.5" />
+          <line x1="2.5" y1="9.5" x2="21.5" y2="9.5" />
+          <line x1="9" y1="9.5" x2="9" y2="20" />
+          <line x1="15" y1="9.5" x2="15" y2="20" />
+        </svg>
+        <span>Table Grabber</span>
+      </div>
+      <div class="source">
+        <span id="source-title" class="source-title"></span>
+        <a id="source-url" class="source-url mono" target="_blank" rel="noopener"></a>
+      </div>
+      <div class="head-stats">
+        <span id="stat-rows" class="pill pill-neon">0 rows</span>
+        <span id="stat-cols" class="pill">0 cols</span>
+      </div>
+    </header>
+
+    <div id="loading" class="state">
+      <div class="spinner"></div>
+      <p>Loading table…</p>
+    </div>
+
+    <div id="error" class="state" hidden>
+      <span class="state-icon" aria-hidden="true">⚠️</span>
+      <p id="error-msg"></p>
+    </div>
+
+    <div id="app" class="app" hidden>
+      <!-- ── Column panel ──────────────────────────────────────────────── -->
+      <aside class="panel">
+        <div class="panel-section" id="deep-section" hidden>
+          <h2>Missing rows?</h2>
+          <p class="hint" id="deep-hint"></p>
+          <div class="opts">
+            <button id="deep-scroll" class="btn-purple full">Scroll for all rows</button>
+            <button id="deep-page" class="btn-purple full" hidden>Walk every page</button>
+          </div>
+          <p id="deep-status" class="hint" role="status" aria-live="polite"></p>
+        </div>
+
+        <details class="panel-section" open>
+          <summary>
+            <h2>Columns</h2>
+            <span class="panel-head-actions">
+              <button id="cols-all" class="btn-ghost tiny" type="button">All</button>
+              <button id="cols-none" class="btn-ghost tiny" type="button">None</button>
+            </span>
+          </summary>
+          <ul id="columns" class="columns"></ul>
+          <label class="check" style="margin-top: 10px">
+            <span class="muted">Name style</span>
+            <select id="opt-header-case" aria-label="Header name style">
+              <option value="none">As found</option>
+              <option value="snake">snake_case</option>
+              <option value="camel">camelCase</option>
+              <option value="title">Title Case</option>
+              <option value="upper">UPPERCASE</option>
+              <option value="lower">lowercase</option>
+            </select>
+          </label>
+        </details>
+
+        <details class="panel-section" open>
+          <summary><h2>Clean up</h2></summary>
+          <div class="opts">
+            <label class="check">
+              <input type="checkbox" id="opt-drop-empty" checked />
+              <span>Drop empty rows &amp; columns</span>
+            </label>
+            <label class="check">
+              <input type="checkbox" id="opt-dedupe" />
+              <span>Remove duplicate rows</span>
+            </label>
+            <label class="check">
+              <input type="checkbox" id="opt-trim" />
+              <span>Trim whitespace</span>
+            </label>
+            <label class="check" title="Copies a value down into the empty cells below it — fixes tables that only label the first row of each group">
+              <input type="checkbox" id="opt-filldown" />
+              <span>Fill blanks from above</span>
+            </label>
+            <label class="check" title="Turns $1,234.00 into 1234 and 45% into 45, so spreadsheets treat them as numbers">
+              <input type="checkbox" id="opt-clean" />
+              <span>Values as numbers</span>
+            </label>
+            <label class="check sub" title="Only dates we can read unambiguously are changed">
+              <input type="checkbox" id="opt-dates" />
+              <span>Dates as YYYY-MM-DD</span>
+            </label>
+            <label class="check sub" title="45% becomes 0.45 instead of 45">
+              <input type="checkbox" id="opt-fraction" />
+              <span>Percents as fractions</span>
+            </label>
+          </div>
+        </details>
+
+        <details class="panel-section">
+          <summary><h2>Find &amp; replace</h2></summary>
+          <div class="opts">
+            <input type="text" id="opt-find" placeholder="Find…" aria-label="Find" />
+            <input type="text" id="opt-replace" placeholder="Replace with…" aria-label="Replace with" />
+            <label class="check">
+              <input type="checkbox" id="opt-regex" />
+              <span>Regular expression</span>
+            </label>
+            <label class="check">
+              <input type="checkbox" id="opt-case" />
+              <span>Match case</span>
+            </label>
+          </div>
+        </details>
+
+        <details class="panel-section">
+          <summary><h2>Shape</h2></summary>
+          <div class="opts">
+            <label class="check" title="Swap rows and columns">
+              <input type="checkbox" id="opt-transpose" />
+              <span>Transpose</span>
+            </label>
+            <label class="check">
+              <span class="muted">Skip first</span>
+              <input type="number" id="opt-skip" value="0" min="0" step="1" style="width: 70px" aria-label="Skip rows" />
+              <span class="muted">rows</span>
+            </label>
+            <label class="check">
+              <span class="muted">Keep first</span>
+              <input type="number" id="opt-limit" value="0" min="0" step="1" style="width: 70px" aria-label="Row limit" />
+              <span class="muted">(0 = all)</span>
+            </label>
+          </div>
+        </details>
+      </aside>
+
+      <!-- ── Preview ───────────────────────────────────────────────────── -->
+      <main class="main">
+        <div class="toolbar">
+          <input type="search" id="search" placeholder="Filter rows…" aria-label="Filter rows" />
+          <select id="sort-col" aria-label="Sort by column">
+            <option value="-1">No sort</option>
+          </select>
+          <select id="sort-dir" aria-label="Sort direction">
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+          </select>
+          <span class="grow"></span>
+          <label class="check" title="How many rows to draw here. Exports always include every row.">
+            <span class="muted">Preview</span>
+            <select id="preview-rows" aria-label="Preview row count">
+              <option value="100">100</option>
+              <option value="500" selected>500</option>
+              <option value="2000">2,000</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="grid-wrap">
+          <table id="grid" class="grid">
+            <thead id="grid-head"></thead>
+            <tbody id="grid-body"></tbody>
+          </table>
+          <p id="grid-note" class="grid-note"></p>
+        </div>
+      </main>
+    </div>
+
+    <!-- ── Export bar ──────────────────────────────────────────────────── -->
+    <footer id="exportbar" class="exportbar" hidden>
+      <div class="fmt">
+        <label for="format" class="muted">Format</label>
+        <select id="format"></select>
+        <span id="format-blurb" class="hint"></span>
+      </div>
+
+      <div class="fmt-opts">
+        <label class="check" id="wrap-delim" hidden>
+          <span class="muted">Delimiter</span>
+          <select id="opt-delim">
+            <option value=",">Comma</option>
+            <option value=";">Semicolon</option>
+            <option value="|">Pipe</option>
+            <option value="\t">Tab</option>
+          </select>
+        </label>
+        <label class="check" id="wrap-sql" hidden>
+          <span class="muted">Dialect</span>
+          <select id="opt-dialect">
+            <option value="postgres">PostgreSQL</option>
+            <option value="mysql">MySQL</option>
+            <option value="sqlite">SQLite</option>
+          </select>
+        </label>
+        <label class="check" id="wrap-sqlname" hidden>
+          <span class="muted">Table</span>
+          <input type="text" id="opt-sqlname" value="grabbed_table" size="14" />
+        </label>
+        <label class="check" id="wrap-headers">
+          <input type="checkbox" id="opt-headers" checked />
+          <span>Header row</span>
+        </label>
+      </div>
+
+      <span class="grow"></span>
+
+      <span id="export-status" class="status" role="status" aria-live="polite"></span>
+      <button id="copy" class="btn-purple">Copy</button>
+      <button id="download" class="btn-primary">Download</button>
+    </footer>
+
+    <script type="module" src="dashboard.js"></script>
+  </body>
+</html>

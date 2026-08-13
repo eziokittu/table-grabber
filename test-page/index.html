@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Table Grabber — test fixtures</title>
+    <style>
+      :root { color-scheme: dark; }
+      body {
+        margin: 0; padding: 32px; background: #0a0510; color: #f2eafc;
+        font: 14px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      main { max-width: 1000px; margin: 0 auto; }
+      h1 { font-size: 24px; margin: 0 0 6px; }
+      .lead { color: #b9a6d4; margin: 0 0 32px; }
+      section { margin-bottom: 44px; }
+      h2 { font-size: 16px; margin: 0 0 4px; color: #39ff14; }
+      .why { color: #7d6c96; font-size: 12.5px; margin: 0 0 12px; }
+      table { border-collapse: collapse; font-size: 13px; }
+      caption { text-align: left; font-weight: 600; padding-bottom: 8px; color: #b9a6d4; }
+      th, td { border: 1px solid rgba(160,100,255,.28); padding: 6px 12px; text-align: left; }
+      th { background: rgba(168,85,247,.16); }
+
+      /* A "table" made of plain boxes — no table semantics at all. */
+      .grid { display: inline-grid; grid-template-columns: repeat(3, minmax(110px, auto)); border: 1px solid rgba(160,100,255,.28); }
+      .grid > div { display: contents; }
+      .grid span { padding: 6px 12px; border-bottom: 1px solid rgba(160,100,255,.16); border-right: 1px solid rgba(160,100,255,.16); }
+      .grid .hd span { background: rgba(168,85,247,.16); font-weight: 600; }
+
+      /* Virtualised: a tall scroller where only some rows are rendered. */
+      #virtual { height: 160px; overflow-y: auto; border: 1px solid rgba(160,100,255,.28); width: 420px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Table Grabber — test fixtures</h1>
+      <p class="lead">
+        Every table below is here because it breaks something. Run the extension on this page.
+      </p>
+
+      <section>
+        <h2>1 — Merged headers and a rowspan body</h2>
+        <p class="why">
+          The classic failure: <code>colspan</code> in the header and <code>rowspan</code> in the body.
+          A naive reader shifts every column after the merge. Expect 3 columns, 3 rows, and
+          <em>Leeds</em> to still belong to <em>UK</em>.
+        </p>
+        <table>
+          <caption>Sales by city</caption>
+          <thead>
+            <tr><th colspan="2">Region</th><th rowspan="2">Sales</th></tr>
+            <tr><th>Country</th><th>City</th></tr>
+          </thead>
+          <tbody>
+            <tr><td rowspan="2">UK</td><td>London</td><td>$1,200.50</td></tr>
+            <tr><td>Leeds</td><td>$800</td></tr>
+            <tr><td rowspan="2">France</td><td>Paris</td><td>$2,400</td></tr>
+            <tr><td>Lyon</td><td>N/A</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>2 — European number formats and placeholders</h2>
+        <p class="why">
+          <code>1.234,56</code> is one thousand two hundred, not one point two. The
+          <code>N/A</code> must not knock the column out of being numeric.
+        </p>
+        <table>
+          <tr><th>Item</th><th>Price</th><th>Share</th><th>Updated</th></tr>
+          <tr><td>Widget</td><td>1.234,56</td><td>45%</td><td>12 March 2024</td></tr>
+          <tr><td>Gadget</td><td>987,10</td><td>30%</td><td>2024-03-15</td></tr>
+          <tr><td>Doohickey</td><td>N/A</td><td>25%</td><td>Mar 18, 2024</td></tr>
+          <tr><td>Thing</td><td>(1.500,00)</td><td>0%</td><td>19/03/2024</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>3 — Awkward cell content</h2>
+        <p class="why">
+          Footnote markers, line breaks, links, images and a nested table. Text extraction should
+          strip the footnotes, keep the break, use the alt text, and ignore the nested table's rows.
+        </p>
+        <table>
+          <tr><th>Country</th><th>Notes</th><th>Flag</th><th>Site</th></tr>
+          <tr>
+            <td>Japan<sup class="reference">[a]</sup></td>
+            <td>First line<br />Second line</td>
+            <td><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Flag of Japan" width="20" height="14" /></td>
+            <td><a href="https://example.com/jp">example.com/jp</a></td>
+          </tr>
+          <tr>
+            <td>Brazil</td>
+            <td>
+              Has a nested table:
+              <table><tr><td>NESTED-A</td><td>NESTED-B</td></tr></table>
+            </td>
+            <td><img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Flag of Brazil" width="20" height="14" /></td>
+            <td><a href="https://example.com/br">example.com/br</a></td>
+          </tr>
+          <tr>
+            <td>Formula test</td>
+            <td>=1+1</td>
+            <td>say "hi"</td>
+            <td>a,b,c</td>
+          </tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>4 — A grid made of divs</h2>
+        <p class="why">
+          No <code>&lt;table&gt;</code> anywhere. Found by repeating structure, not by class names.
+        </p>
+        <div class="grid">
+          <div class="hd"><span>Name</span><span>Role</span><span>Since</span></div>
+          <div><span>Ada</span><span>Engineer</span><span>2019</span></div>
+          <div><span>Grace</span><span>Architect</span><span>2020</span></div>
+          <div><span>Alan</span><span>Researcher</span><span>2021</span></div>
+          <div><span>Katherine</span><span>Analyst</span><span>2022</span></div>
+        </div>
+      </section>
+
+      <section>
+        <h2>5 — Virtualised rows</h2>
+        <p class="why">
+          Only the rows near the viewport exist in the DOM; scrolling swaps them. A single read
+          gets a fraction of 500. Use <strong>Scroll for all rows</strong> in the editor.
+        </p>
+        <div id="virtual"><table id="virtual-table"><thead><tr><th>#</th><th>Label</th><th>Value</th></tr></thead><tbody></tbody></table></div>
+      </section>
+
+      <section>
+        <h2>6 — Inside a shadow root</h2>
+        <p class="why">A plain <code>querySelectorAll</code> walks straight past this one.</p>
+        <div id="shadow-host"></div>
+      </section>
+
+      <section>
+        <h2>7 — Paginated</h2>
+        <p class="why">
+          Three pages of five. Use <strong>Walk every page</strong> to get all 15 rows.
+        </p>
+        <table id="paged"><thead><tr><th>ID</th><th>Product</th><th>Qty</th></tr></thead><tbody></tbody></table>
+        <p>
+          <button id="prev">‹ Prev</button>
+          <span id="pageinfo">Page 1 of 3</span>
+          <button id="next">Next ›</button>
+        </p>
+      </section>
+    </main>
+
+    <script>
+      // ── 5: a crude virtualiser, faithful to how the real ones behave ──────
+      const ROWS = Array.from({ length: 500 }, (_, i) => [
+        String(i + 1),
+        `Item ${String(i + 1).padStart(3, "0")}`,
+        String(Math.round(Math.sin(i) * 1000) / 10),
+      ]);
+      const ROW_H = 29;
+      const scroller = document.getElementById("virtual");
+      const vbody = document.querySelector("#virtual-table tbody");
+
+      function renderVirtual() {
+        const start = Math.max(0, Math.floor(scroller.scrollTop / ROW_H) - 2);
+        const visible = Math.ceil(scroller.clientHeight / ROW_H) + 4;
+        const slice = ROWS.slice(start, start + visible);
+
+        vbody.replaceChildren();
+        // Spacers keep the scrollbar honest, exactly as a real virtualiser does.
+        const pad = (h) => {
+          const tr = document.createElement("tr");
+          const td = document.createElement("td");
+          td.colSpan = 3;
+          td.style.height = h + "px";
+          td.style.padding = "0";
+          td.style.border = "none";
+          tr.append(td);
+          return tr;
+        };
+        if (start > 0) vbody.append(pad(start * ROW_H));
+        for (const [i, r] of slice.entries()) {
+          const tr = document.createElement("tr");
+          // A real grid exposes its row index; Table Grabber uses it when present.
+          tr.setAttribute("aria-rowindex", String(start + i + 1));
+          for (const cell of r) {
+            const td = document.createElement("td");
+            td.textContent = cell;
+            tr.append(td);
+          }
+          vbody.append(tr);
+        }
+        const after = ROWS.length - (start + slice.length);
+        if (after > 0) vbody.append(pad(after * ROW_H));
+      }
+      scroller.addEventListener("scroll", renderVirtual);
+      renderVirtual();
+
+      // ── 6: shadow root ───────────────────────────────────────────────────
+      const shadow = document.getElementById("shadow-host").attachShadow({ mode: "open" });
+      shadow.innerHTML = `
+        <style>
+          table { border-collapse: collapse; font: 13px system-ui; color: #f2eafc; }
+          th, td { border: 1px solid rgba(160,100,255,.28); padding: 6px 12px; text-align: left; }
+          th { background: rgba(57,255,20,.14); }
+        </style>
+        <table>
+          <tr><th>Element</th><th>Symbol</th><th>Number</th></tr>
+          <tr><td>Hydrogen</td><td>H</td><td>1</td></tr>
+          <tr><td>Helium</td><td>He</td><td>2</td></tr>
+          <tr><td>Lithium</td><td>Li</td><td>3</td></tr>
+        </table>`;
+
+      // ── 7: pagination ────────────────────────────────────────────────────
+      const ALL = Array.from({ length: 15 }, (_, i) => [
+        `SKU-${1000 + i}`,
+        ["Bolt", "Nut", "Washer", "Screw", "Rivet"][i % 5],
+        String((i * 7) % 40 + 1),
+      ]);
+      let page = 0;
+      const pbody = document.querySelector("#paged tbody");
+      const info = document.getElementById("pageinfo");
+
+      function renderPage() {
+        pbody.replaceChildren();
+        for (const row of ALL.slice(page * 5, page * 5 + 5)) {
+          const tr = document.createElement("tr");
+          for (const cell of row) {
+            const td = document.createElement("td");
+            td.textContent = cell;
+            tr.append(td);
+          }
+          pbody.append(tr);
+        }
+        info.textContent = `Page ${page + 1} of 3`;
+        document.getElementById("prev").disabled = page === 0;
+        document.getElementById("next").disabled = page === 2;
+      }
+      document.getElementById("next").addEventListener("click", () => { if (page < 2) { page++; renderPage(); } });
+      document.getElementById("prev").addEventListener("click", () => { if (page > 0) { page--; renderPage(); } });
+      renderPage();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Table Grabber</title>
+    <link rel="stylesheet" href="../shared/theme.css" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="head">
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="2.5" y="4" width="19" height="16" rx="2.5" />
+          <line x1="2.5" y1="9.5" x2="21.5" y2="9.5" />
+          <line x1="9" y1="9.5" x2="9" y2="20" />
+          <line x1="15" y1="9.5" x2="15" y2="20" />
+        </svg>
+        <span>Table Grabber</span>
+      </div>
+      <button id="rescan" class="btn-ghost" title="Scan the page again">Rescan</button>
+    </header>
+
+    <!-- Scanning -->
+    <div id="loading" class="state">
+      <div class="spinner"></div>
+      <p>Looking for tables…</p>
+    </div>
+
+    <!-- Page cannot be read -->
+    <div id="blocked" class="state" hidden>
+      <span class="state-icon" aria-hidden="true">🚫</span>
+      <p id="blocked-msg">Chrome does not allow extensions to run on this page.</p>
+      <p class="muted small">Open a normal website and try again.</p>
+    </div>
+
+    <!-- Nothing found -->
+    <div id="empty" class="state" hidden>
+      <span class="state-icon" aria-hidden="true">🔍</span>
+      <p>No tables found on this page.</p>
+      <p class="muted small">
+        Some sites draw tables out of plain boxes. Point at one yourself and it will still be read.
+      </p>
+      <button id="pick-empty" class="btn-purple">Pick a table by clicking</button>
+    </div>
+
+    <!-- Results -->
+    <main id="results" hidden>
+      <div class="summary">
+        <span id="count" class="pill pill-neon">0 tables</span>
+        <button id="pick" class="btn-ghost" title="Click a table on the page to select it">
+          <span aria-hidden="true">🎯</span> Pick one
+        </button>
+      </div>
+      <ul id="list" class="list"></ul>
+    </main>
+
+    <footer class="foot">
+      <span id="status" class="status" role="status" aria-live="polite"></span>
+      <a href="https://glitchbong.com/tools/table-grabber" target="_blank" rel="noopener">Guide</a>
+    </footer>
+
+    <template id="row-template">
+      <li class="item">
+        <button class="item-main" type="button">
+          <span class="item-head">
+            <span class="item-label"></span>
+            <span class="item-badges"></span>
+          </span>
+          <span class="item-dims mono"></span>
+          <span class="item-preview mono"></span>
+        </button>
+        <div class="item-actions">
+          <button class="act" data-act="csv" title="Copy as CSV">CSV</button>
+          <button class="act" data-act="tsv" title="Copy as TSV — pastes into Sheets and Excel as cells">TSV</button>
+          <button class="act" data-act="markdown" title="Copy as Markdown">MD</button>
+          <button class="act act-open btn-purple" data-act="open" title="Open in the editor">Open →</button>
+        </div>
+      </li>
+    </template>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

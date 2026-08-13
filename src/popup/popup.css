@@ -1,0 +1,198 @@
+/* Popup: a 380px column that lists what is on the page and gets out of the way.
+   Anything more involved happens in the editor tab. */
+
+body {
+  width: 380px;
+  max-height: 580px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+
+.logo {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--neon);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+
+/* ── States ──────────────────────────────────────────────────────────────── */
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--text-2);
+}
+.state p {
+  margin: 0;
+}
+.state-icon {
+  font-size: 26px;
+  opacity: 0.85;
+}
+.small {
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
+/* ── Results ─────────────────────────────────────────────────────────────── */
+
+#results {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  z-index: 2;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color 0.12s;
+}
+.item:hover {
+  border-color: var(--border-bright);
+}
+
+/* The whole card body is the "show me this one" target. */
+.item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 11px 7px;
+  background: none;
+  border: none;
+  border-radius: 0;
+  color: inherit;
+}
+.item-main:hover {
+  background: var(--surface-2);
+  border-color: transparent;
+}
+
+.item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.item-label {
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-badges {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.item-dims {
+  font-size: 11px;
+  color: var(--neon);
+}
+
+.item-preview {
+  font-size: 10.5px;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-actions {
+  display: flex;
+  gap: 5px;
+  padding: 0 11px 9px;
+}
+
+.act {
+  flex: 1;
+  padding: 5px 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.act-open {
+  flex: 1.5;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.status {
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.status.ok {
+  color: var(--neon);
+}
+.status.err {
+  color: var(--red);
+}

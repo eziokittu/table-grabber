@@ -1,0 +1,17 @@
+{
+  "name": "table-grabber",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Chrome extension that copies any web table to CSV, Excel, Markdown, JSON, SQL and more. Unlimited rows, nothing uploaded.",
+  "homepage": "https://glitchbong.com/tools/table-grabber",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test": "node scripts/check.mjs && node scripts/sync-site.mjs --check",
+    "icons": "node scripts/make-icons.mjs",
+    "build": "node scripts/check.mjs && node scripts/build.mjs",
+    "demo": "node scripts/serve-demo.mjs",
+    "e2e": "node scripts/e2e.mjs",
+    "sync": "node scripts/sync-site.mjs"
+  }
+}
