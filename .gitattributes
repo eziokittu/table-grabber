@@ -1,0 +1,7 @@
+# Normalise line endings so the repo is identical on every machine, and so the
+# packaged ZIP has a stable checksum regardless of who built it.
+* text=auto eol=lf
+
+# Binary — never touch these.
+*.png binary
+*.zip binary
