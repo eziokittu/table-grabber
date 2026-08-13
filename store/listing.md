@@ -25,7 +25,7 @@ Developer Tools
 ## Detailed description
 
 ```
-Table Grabber copies any table on any web page into the format you actually need — CSV, Excel, Markdown, JSON, SQL, YAML, LaTeX, HTML or plain text.
+Table Grabber copies any table on any web page into the format you actually need — CSV, Excel, Markdown, JSON, JSON Lines, XML, SQL, YAML, LaTeX, HTML or plain text.
 
 Every format is free. Every row is included. There is no account, no row limit, and no upload — the extension has no network code in it at all.
 
@@ -87,7 +87,7 @@ In the editor: Ctrl+S downloads, Ctrl+Shift+C copies.
 Free, open source, and free of charge permanently. Turning a table into a CSV is arithmetic — it needs no server, so it has no running cost, so there is nothing to charge for.
 
 Guide and web version: https://glitchbong.com/tools/table-grabber
-Source: https://github.com/bodhisattabhattacharjee/table-grabber
+Source: https://github.com/eziokittu/table-grabber
 ```
 
 ## Permission justifications
@@ -136,7 +136,7 @@ Tick nothing. The extension collects and transmits no user data. Certify:
 1. `01-popup.png` — popup listing several tables on a real page, badges visible
 2. `02-editor.png` — editor with the preview grid and column panel
 3. `03-merged.png` — a merged-header table beside the correctly aligned output
-4. `04-formats.png` — the format dropdown open, all ten visible
+4. `04-formats.png` — the format dropdown open, all thirteen visible
 5. `05-picker.png` — picker overlay highlighting a table on a page
 
 ## Promotional tiles

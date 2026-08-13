@@ -1,8 +1,8 @@
 # Table Grabber
 
-Copy any table on any web page to **CSV, Excel, Markdown, JSON, SQL, YAML,
-LaTeX, HTML or plain text**. Unlimited rows, every format free, nothing
-uploaded.
+Copy any table on any web page to **CSV, Excel, Markdown, JSON, JSON Lines,
+XML, SQL, YAML, LaTeX, HTML or plain text**. Unlimited rows, every format
+free, nothing uploaded.
 
 A Chrome extension, MIT licensed, with no server, no account and no network
 code of any kind.
@@ -85,9 +85,9 @@ Multi-row headers are stacked into one name, so a grouped header reads
 ### From source
 
 ```bash
-git clone https://github.com/bodhisattabhattacharjee/table-grabber
+git clone https://github.com/eziokittu/table-grabber
 cd table-grabber
-npm test        # 37 checks, no dependencies to install
+npm test        # 80 checks, no dependencies to install
 ```
 
 Then load it:

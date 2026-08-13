@@ -72,4 +72,4 @@ the version published with the extension.
 
 Questions or a security report: <https://glitchbong.com/contact>
 
-Source: <https://github.com/bodhisattabhattacharjee/table-grabber>
+Source: <https://github.com/eziokittu/table-grabber>
