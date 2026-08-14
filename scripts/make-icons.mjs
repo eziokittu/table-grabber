@@ -209,7 +209,31 @@ for (const size of SIZES) {
   console.log(`  icons/icon-${size}.png  ${png.length} bytes`);
 }
 
-// The store wants a 512px version for the listing.
+/**
+ * Composites a rendered mark into the centre of a larger transparent canvas.
+ * @param {number} canvas edge length of the output
+ * @param {number} art edge length of the drawn mark
+ */
+function padded(canvas, art) {
+  const src = render(art);
+  const out = Buffer.alloc(canvas * canvas * 4); // zeroed: fully transparent
+  const offset = Math.round((canvas - art) / 2);
+  for (let y = 0; y < art; y++) {
+    src.copy(out, ((y + offset) * canvas + offset) * 4, y * art * 4, (y + 1) * art * 4);
+  }
+  return out;
+}
+
+// The store listing's icon field is not the same picture as the toolbar icon.
+// Google asks for 96x96 of artwork inside a 128x128 canvas — the 16px of
+// transparent padding per side is what stops the mark colliding with the frame
+// the store draws around it. Full-bleed is right in the toolbar and wrong here,
+// so this is a separate file rather than a change to icons/icon-128.png.
+const storeIcon = encodePng(128, padded(128, 96));
+writeFileSync(join(ROOT, "store", "icon-128-store.png"), storeIcon);
+console.log(`  store/icon-128-store.png  ${storeIcon.length} bytes  (96px mark, 16px padding)`);
+
+// A 512px version for anywhere that wants a large mark. Not a store field.
 const big = encodePng(512, render(512));
 writeFileSync(join(ROOT, "store", "icon-512.png"), big);
 console.log(`  store/icon-512.png  ${big.length} bytes`);

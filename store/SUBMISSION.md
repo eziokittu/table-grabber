@@ -63,7 +63,7 @@ All generated from code in this repo — `npm run screenshots` and `npm run prom
 
 | Asset | Size | File | Required |
 | --- | --- | --- | --- |
-| Store icon | 128×128 | `icons/icon-128.png` | **Yes** |
+| Store icon | 128×128 | `store/icon-128-store.png` | **Yes** |
 | Screenshot 1 | 1280×800 | `store/screenshots/01-picker.png` | **Yes** (at least one) |
 | Screenshot 2 | 1280×800 | `store/screenshots/02-editor.png` | Recommended |
 | Screenshot 3 | 1280×800 | `store/screenshots/03-formats.png` | Recommended |
@@ -75,8 +75,16 @@ All generated from code in this repo — `npm run screenshots` and `npm run prom
 The store allows up to five screenshots and all five slots are filled. Upload
 them in the order above; the first is the one shown on the listing card.
 
-`store/icon-512.png` is not a store field; it is there for anywhere else that
-wants a large mark.
+> **Upload `store/icon-128-store.png`, not `icons/icon-128.png` and not
+> `store/icon-512.png`.** All three are the same mark and only one is the right
+> shape for this field. The listing icon wants 96×96 of artwork centred in a
+> 128×128 canvas, with 16 transparent pixels a side; `icons/icon-128.png` is
+> full-bleed because that is correct in the toolbar and wrong here.
+> `store/icon-512.png` is 512×512 and is not a store field at all — it exists
+> for anywhere else that wants a large mark. Uploading either of the other two
+> is what produces *"The image size is incorrect."*
+
+Regenerate all of them with `npm run icons`.
 
 Shot 5 is the one asset that is assembled rather than captured whole: the popup
 is its own native window and refuses a size override, so a real capture of it is
