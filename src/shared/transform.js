@@ -436,7 +436,7 @@ export function applyState(table, state) {
   if (s.dedupe) {
     const seen = new Set();
     rows = rows.filter((r) => {
-      const key = r.join(" ");
+      const key = r.join("\0");
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -653,7 +653,7 @@ export function mergeTables(tables) {
 
   // Pagination frequently re-serves the last page; drop exact duplicate rows
   // only when they are adjacent, so legitimately repeated data survives.
-  const deduped = rows.filter((r, i) => i === 0 || r.join(" ") !== rows[i - 1].join(" "));
+  const deduped = rows.filter((r, i) => i === 0 || r.join("\0") !== rows[i - 1].join("\0"));
 
   return { ...base, rows: deduped, rowCount: deduped.length, mergedFrom: merged };
 }
