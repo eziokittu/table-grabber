@@ -274,6 +274,13 @@ await shoot(dashSession, "04-transforms.png");
 // chrome.action.openPopup() is the only honest way to capture the real popup;
 // CDP cannot click a toolbar icon. It is not available in every channel, so the
 // fallback is recorded rather than faked.
+//
+// Opening the editor left an extension page in front, and a popup opened over
+// one of those correctly reports that Chrome will not let it run there. True,
+// and worthless as a screenshot — so put the fixture page back in front first.
+await evaluate(swSession, `chrome.tabs.update(${tabId}, { active: true }).then(() => true)`);
+await sleep(700);
+
 const opened = await evaluate(
   swSession,
   `(async () => {
@@ -283,22 +290,62 @@ const opened = await evaluate(
 ).catch((e) => "threw: " + e.message);
 
 if (opened === "ok") {
-  await sleep(1200);
+  await sleep(1400);
   const popup = (await targets()).find((t) => t.url.includes("popup.html"));
   if (popup) {
     // The popup is its own small native window and rejects a metrics override,
-    // so it is captured at its real size. That is not one of the two sizes the
-    // store accepts, so this is a supplementary asset rather than a listing
-    // screenshot — see store/listing.md.
+    // so it can only be captured at its real size — which is not one of the two
+    // sizes the store accepts. Rather than pad it onto dead space, it is placed
+    // over a live capture of the page beneath it, anchored where Chrome would
+    // actually draw it. Both halves are real captures; only their arrangement
+    // is assembled, and the arrangement is the one the user sees.
     const popupSession = await attach(popup.targetId, false);
     await send("Page.enable", {}, popupSession).catch(() => {});
+    await sleep(800);
+
+    const listed = await evaluate(
+      popupSession,
+      `document.querySelectorAll("#list .t-item, #list li, #list button").length`
+    ).catch(() => -1);
+    console.log(`  (popup is listing ${listed} table entries)`);
+
+    const popPng = (await send("Page.captureScreenshot", { format: "png" }, popupSession)).data;
+
+    // The picker's "Esc to cancel" bar from shot 1 can outlive the synthetic
+    // Escape, and a page showing picker mode underneath an open popup is a
+    // state the product never actually reaches. Make sure it is gone.
+    await evaluate(
+      pageSession,
+      `(() => {
+         document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+         const overlay = document.getElementById("__table-grabber-overlay");
+         if (overlay) overlay.remove();
+         return true;
+       })()`
+    );
+    await sleep(300);
+    const bgPng = (await send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false }, pageSession)).data;
+
+    const composed = `<!doctype html><meta charset="utf-8"><style>
+      html, body { margin: 0; padding: 0; width: ${W}px; height: ${H}px; overflow: hidden; background: #fff; }
+      .bg { position: absolute; inset: 0; width: ${W}px; height: ${H}px; }
+      .pop { position: absolute; top: 20px; right: 28px; border-radius: 10px; overflow: hidden;
+             box-shadow: 0 20px 64px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.18); }
+      .pop img { display: block; }
+      .notch { position: absolute; top: 8px; right: 92px; width: 0; height: 0;
+               border-left: 10px solid transparent; border-right: 10px solid transparent;
+               border-bottom: 12px solid #150a20; filter: drop-shadow(0 -2px 3px rgba(0,0,0,.35)); }
+    </style>
+    <img class="bg" src="data:image/png;base64,${bgPng}">
+    <div class="notch"></div>
+    <div class="pop"><img src="data:image/png;base64,${popPng}"></div>`;
+
+    const { targetId } = await send("Target.createTarget", { url: "about:blank" });
+    const composeSession = await attach(targetId);
+    const { frameTree } = await send("Page.getFrameTree", {}, composeSession);
+    await send("Page.setDocumentContent", { frameId: frameTree.frame.id, html: composed }, composeSession);
     await sleep(700);
-    try {
-      await shoot(popupSession, "supplementary-popup.png");
-      console.log("                (natural size — pad to 1280x800 before uploading, or leave it out)");
-    } catch (e) {
-      console.log("  supplementary-popup.png  SKIPPED (" + e.message + ")");
-    }
+    await shoot(composeSession, "05-popup.png");
   } else {
     console.log("  popup  SKIPPED (opened, but no target appeared)");
   }

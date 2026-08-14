@@ -68,16 +68,21 @@ All generated from code in this repo — `npm run screenshots` and `npm run prom
 | Screenshot 2 | 1280×800 | `store/screenshots/02-editor.png` | Recommended |
 | Screenshot 3 | 1280×800 | `store/screenshots/03-formats.png` | Recommended |
 | Screenshot 4 | 1280×800 | `store/screenshots/04-transforms.png` | Recommended |
+| Screenshot 5 | 1280×800 | `store/screenshots/05-popup.png` | Recommended |
 | Small promo tile | 440×280 | `store/promo-small-440x280.png` | Optional |
 | Marquee promo tile | 1400×560 | `store/promo-marquee-1400x560.png` | Optional — needed for homepage features |
+
+The store allows up to five screenshots and all five slots are filled. Upload
+them in the order above; the first is the one shown on the listing card.
 
 `store/icon-512.png` is not a store field; it is there for anywhere else that
 wants a large mark.
 
-`store/screenshots/supplementary-popup.png` is a real capture of the popup at
-its natural size. It is **not** 1280×800, so it cannot be uploaded as-is —
-either pad it to size in an image editor or leave it out. The four above tell
-the story without it.
+Shot 5 is the one asset that is assembled rather than captured whole: the popup
+is its own native window and refuses a size override, so a real capture of it is
+placed over a real capture of the page beneath, anchored where Chrome draws it.
+Both halves are genuine and the arrangement is the one a user sees, which is
+what the misleading-imagery rule is about.
 
 ### Screenshot captions
 
@@ -88,6 +93,7 @@ overlay text later:
 2. **Merged cells come out aligned** — the editor showing the rowspan filled correctly
 3. **Thirteen formats, none of them paid**
 4. **Clean the data before you export it** — numeric values and snake_case headers
+5. **Every table on the page, one click each** — the popup listing seven, badged
 
 ---
 
