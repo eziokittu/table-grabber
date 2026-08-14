@@ -478,3 +478,16 @@ details.panel-section > summary .panel-head-actions + ::after {
   cursor: help;
 }
 
+
+/* A refused find pattern. Deliberately loud: the failure mode it replaces was
+   a replace that silently did nothing. */
+.pattern-error {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--red);
+  background: rgba(255, 92, 108, 0.1);
+  border: 1px solid rgba(255, 92, 108, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  margin: 4px 0 0;
+}

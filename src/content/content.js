@@ -122,13 +122,41 @@
     }
   }
 
-  function hud(text, busy) {
+  /**
+   * Draws the status bar.
+   *
+   * Built node by node rather than with innerHTML. Nothing untrusted reaches it
+   * today — the arguments are our own counters — but it sits in a content
+   * script, and an innerHTML sink one refactor away from page-derived text is
+   * not worth keeping for the sake of a shorter line.
+   *
+   * @param {string|null} text  plain text; use `key` for a keyboard hint
+   * @param {{busy?: boolean, key?: string, keyTail?: string}} [options]
+   */
+  function hud(text, options) {
+    const o = options || {};
     const s = ensureOverlay();
     const el = s.querySelector(".hud");
     if (!text) { el.hidden = true; return; }
+
     el.hidden = false;
-    el.className = "hud" + (busy ? " busy" : "");
-    el.innerHTML = `<span class="dot"></span><span>${text}</span>`;
+    el.className = "hud" + (o.busy ? " busy" : "");
+    el.replaceChildren();
+
+    const dot = document.createElement("span");
+    dot.className = "dot";
+    el.append(dot);
+
+    const label = document.createElement("span");
+    label.textContent = text;
+    el.append(label);
+
+    if (o.key) {
+      const kbd = document.createElement("kbd");
+      kbd.textContent = o.key;
+      el.append(document.createTextNode(" "), kbd);
+      if (o.keyTail) el.append(document.createTextNode(" " + o.keyTail));
+    }
   }
 
   function clearOverlay() {
@@ -261,7 +289,7 @@
       document.addEventListener("keydown", onKey, true);
       window.addEventListener("scroll", onScroll, true);
 
-      hud('Click a table to grab it &nbsp;<kbd>Esc</kbd> to cancel');
+      hud("Click a table to grab it", { key: "Esc", keyTail: "to cancel" });
       picker = { cancel: () => { cleanup(); resolve(null); } };
     });
   }
@@ -280,14 +308,14 @@
 
     try {
       if (mode === "paginate") {
-        hud("Walking pages… <kbd>Esc</kbd> to stop", true);
+        hud("Walking pages…", { busy: true, key: "Esc", keyTail: "to stop" });
         const onKey = (e) => { if (e.key === "Escape") stopRequested = true; };
         document.addEventListener("keydown", onKey, true);
 
         const result = await m.captureByPaging(
           entry,
           options,
-          (p) => hud(`Page ${p.pages} · ${p.rows} rows… <kbd>Esc</kbd> to stop`, true),
+          (p) => hud(`Page ${p.pages} · ${p.rows} rows…`, { busy: true, key: "Esc", keyTail: "to stop" }),
           () => stopRequested
         );
 
@@ -304,9 +332,9 @@
         };
       }
 
-      hud("Scrolling for more rows…", true);
+      hud("Scrolling for more rows…", { busy: true });
       const result = await m.captureByScrolling(entry, options, (p) =>
-        hud(`${p.rows} rows so far…`, true)
+        hud(`${p.rows} rows so far…`, { busy: true })
       );
       entry.table = result.table;
       hud(null);

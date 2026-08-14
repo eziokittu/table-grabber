@@ -27,6 +27,7 @@ const els = {
   optTrim: $("opt-trim"), optFillDown: $("opt-filldown"), optHeaderCase: $("opt-header-case"),
   optFind: $("opt-find"), optReplace: $("opt-replace"), optRegex: $("opt-regex"), optCase: $("opt-case"),
   optTranspose: $("opt-transpose"), optSkip: $("opt-skip"), optLimit: $("opt-limit"),
+  patternError: $("pattern-error"),
   deepSection: $("deep-section"), deepHint: $("deep-hint"), deepStatus: $("deep-status"),
   deepScroll: $("deep-scroll"), deepPage: $("deep-page"),
   search: $("search"), sortCol: $("sort-col"), sortDir: $("sort-dir"), previewRows: $("preview-rows"),
@@ -378,6 +379,12 @@ function recompute() {
   view = applyState(raw, state);
   syncSortOptions();
   renderGrid();
+
+  // A refused find pattern has to say so. Silently doing nothing is worse than
+  // an error here, because the user assumes the replace worked and exports
+  // data that was never changed.
+  els.patternError.textContent = view.patternError || "";
+  els.patternError.hidden = !view.patternError;
 
   els.statRows.textContent = `${view.rowCount.toLocaleString()} rows`;
   els.statCols.textContent = `${view.colCount} cols`;

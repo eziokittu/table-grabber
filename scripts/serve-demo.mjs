@@ -7,7 +7,7 @@
  */
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
-import { join, dirname, resolve, extname, normalize } from "node:path";
+import { join, dirname, resolve, extname, normalize, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "test-page");
@@ -28,7 +28,10 @@ createServer(async (req, res) => {
     // normalize() before joining, so ../ cannot escape the fixture directory.
     const rel = normalize(decodeURIComponent(url.pathname)).replace(/^[/\\]+/, "");
     const path = join(ROOT, rel || "index.html");
-    if (!path.startsWith(ROOT)) {
+    // Compare against ROOT + separator, not ROOT alone: a bare prefix test also
+    // accepts a sibling directory whose name merely starts with the same
+    // characters (test-page-something), which is not inside ROOT at all.
+    if (path !== ROOT && !path.startsWith(ROOT + sep)) {
       res.writeHead(403).end("Forbidden");
       return;
     }

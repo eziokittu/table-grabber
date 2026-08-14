@@ -91,16 +91,28 @@ function typedValue(raw, type) {
   return s;
 }
 
+/**
+ * Builds a record keyed by header name.
+ *
+ * The null prototype is not decoration. On a normal object literal,
+ * `obj["__proto__"] = "x"` goes through the inherited accessor rather than
+ * creating a property, so a column genuinely named `__proto__` — which any
+ * scraped page can produce — vanished from the export without a word. A
+ * null-prototype object has no such accessor, so the key is stored like any
+ * other, and JSON.stringify serialises it normally.
+ */
+function record(headers, row, types, typed) {
+  const obj = Object.create(null);
+  headers.forEach((h, i) => {
+    obj[h] = typed ? typedValue(row[i], types[i]) : String(row[i] ?? "");
+  });
+  return obj;
+}
+
 export function toJson(table, opts) {
   const o = { typed: true, indent: 2, ...(opts || {}) };
   const types = table.types || inferColumnTypes(table);
-  const out = table.rows.map((row) => {
-    const obj = {};
-    table.headers.forEach((h, i) => {
-      obj[h] = o.typed ? typedValue(row[i], types[i]) : String(row[i] ?? "");
-    });
-    return obj;
-  });
+  const out = table.rows.map((row) => record(table.headers, row, types, o.typed));
   return JSON.stringify(out, null, o.indent);
 }
 
@@ -115,11 +127,7 @@ export function toJsonLines(table) {
   const types = table.types || inferColumnTypes(table);
   return (
     table.rows
-      .map((row) => {
-        const obj = {};
-        table.headers.forEach((h, i) => { obj[h] = typedValue(row[i], types[i]); });
-        return JSON.stringify(obj);
-      })
+      .map((row) => JSON.stringify(record(table.headers, row, types, true)))
       .join("\n") + "\n"
   );
 }

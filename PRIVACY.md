@@ -58,6 +58,22 @@ Be aware that a grabbed table contains whatever the page contained. If you
 export a table from a logged-in page, the file may hold personal or
 account-specific data. Treat exported files as you would any other download.
 
+## One thing worth disclosing
+
+The extension's engine modules are listed as
+`web_accessible_resources`, which is what lets the code be loaded into the page
+when you invoke it. A side effect is that a website can detect that this
+extension is installed, by requesting one of those files and seeing whether it
+answers. This is called extension fingerprinting, and it applies to a large
+share of extensions on the store.
+
+It does not expose anything you have grabbed, and no data is sent anywhere — it
+only reveals *that the extension exists* in your browser. Chrome offers a
+`use_dynamic_url` flag that would prevent it, but enabling it breaks the module
+loading this extension depends on (verified, not assumed). Removing the
+exposure properly means bundling the engine into the injected script at build
+time, which is planned.
+
 ## Third parties
 
 There are none. No SDKs, no libraries loaded at runtime, no bundled

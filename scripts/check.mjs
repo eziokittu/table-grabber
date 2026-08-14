@@ -186,7 +186,7 @@ const mod = (p) => import(pathToFileURL(join(ROOT, p)).href);
 
 const { extractTable, SPAN_POLICY } = await mod("src/shared/extract.js");
 const { applyState, parseNumber, inferColumnTypes, TYPES } = await mod("src/shared/transform.js");
-const { toCsv, toTsv, toMarkdown, toJson, toSql } = await mod("src/shared/export.js");
+const { toCsv, toTsv, toMarkdown, toJson, toSql, suggestFilename: suggestFilenameFn } = await mod("src/shared/export.js");
 
 // A table with a colspan header and a rowspan body cell — the shape that
 // misaligns every naive scraper.
@@ -481,6 +481,115 @@ section("new exporters");
   lines.length === 2 && JSON.parse(lines[0]).a === 1
     ? ok("JSON Lines writes one typed record per line")
     : fail("jsonl", JSON.stringify(lines));
+}
+
+// ── Security ───────────────────────────────────────────────────────────────
+//
+// Each of these was a real finding, confirmed by probing the shipped modules
+// before it was fixed.
+section("security");
+
+{
+  // A column named __proto__ used to vanish from JSON exports: on a normal
+  // object literal the assignment goes through the inherited accessor instead
+  // of creating a property. Silent data loss on any page that produces that
+  // header.
+  const table = { headers: ["__proto__", "safe"], rows: [["danger", "ok"]] };
+  const parsed = JSON.parse(toJson(table));
+  Object.prototype.hasOwnProperty.call(parsed[0], "__proto__") && parsed[0]["__proto__"] === "danger"
+    ? ok("a __proto__ column survives JSON export")
+    : fail("a __proto__ column survives JSON export", toJson(table));
+
+  const line = JSON.parse(toJsonLines(table).trim());
+  Object.prototype.hasOwnProperty.call(line, "__proto__")
+    ? ok("a __proto__ column survives JSON Lines export")
+    : fail("a __proto__ column survives JSON Lines export", toJsonLines(table));
+
+  // And the export must not touch the real prototype on the way through.
+  const sentinel = ({}).tgPolluted;
+  toJson({ headers: ["__proto__"], rows: [['{"tgPolluted":1}']] });
+  ({}).tgPolluted === sentinel
+    ? ok("JSON export does not pollute Object.prototype")
+    : fail("JSON export does not pollute Object.prototype");
+}
+
+{
+  // Catastrophic backtracking. Before the guard, this pattern over 300 rows
+  // never returned at all — the tab was gone. JavaScript cannot interrupt a
+  // running regex, so the pattern has to be refused before it is used.
+  const { compilePattern } = await mod("src/shared/transform.js");
+
+  const evil = compilePattern("(a+)+$", true, false);
+  evil.pattern === null && /freeze|backtrack/i.test(evil.error || "")
+    ? ok("a catastrophic regex is refused with an explanation")
+    : fail("a catastrophic regex is refused", JSON.stringify(evil.error));
+
+  const alsoEvil = compilePattern("(a|a)*$", true, false);
+  alsoEvil.pattern === null
+    ? ok("an alternation-overlap regex is refused")
+    : fail("an alternation-overlap regex is refused");
+
+  const fine = compilePattern("^\\d{4}-\\d{2}-\\d{2}$", true, false);
+  fine.pattern !== null && fine.error === null
+    ? ok("an ordinary regex is still accepted")
+    : fail("an ordinary regex is still accepted", JSON.stringify(fine.error));
+
+  const broken = compilePattern("[", true, false);
+  broken.pattern === null && /valid/i.test(broken.error || "")
+    ? ok("an invalid regex reports why")
+    : fail("an invalid regex reports why", JSON.stringify(broken.error));
+
+  // The whole point: applying it must now finish quickly rather than hang.
+  const rows = Array.from({ length: 300 }, () => ["a".repeat(40) + "!"]);
+  const started = Date.now();
+  const out = applyState({ headers: ["v"], rows }, {
+    replace: { find: "(a+)+$", replaceWith: "x", regex: true },
+    dropEmpty: false,
+  });
+  const ms = Date.now() - started;
+  ms < 2000
+    ? ok(`a catastrophic pattern no longer hangs the table (${ms}ms)`)
+    : fail("a catastrophic pattern no longer hangs the table", ms + "ms");
+  out.patternError
+    ? ok("the refused pattern is reported back to the UI")
+    : fail("the refused pattern is reported back to the UI");
+  out.rowCount === 300
+    ? ok("data is left untouched when a pattern is refused")
+    : fail("data is left untouched when a pattern is refused", out.rowCount);
+}
+
+{
+  // A literal search must never be interpreted as a pattern, however it looks.
+  const { compilePattern } = await mod("src/shared/transform.js");
+  const literal = compilePattern("(a+)+$", false, false);
+  literal.pattern !== null && !literal.pattern.test("aaaa")
+    ? ok("a literal search of regex-looking text is not compiled as a regex")
+    : fail("literal search escaping", String(literal.pattern));
+}
+
+{
+  // Exports must not be able to smuggle markup or formulas out.
+  const xml = toXml({ headers: ["a><script>x</script><b"], rows: [["</a><script>y</script>"]] });
+  !xml.includes("<script>")
+    ? ok("XML escapes both tag names and values")
+    : fail("XML escapes both tag names and values", xml);
+
+  const csv = toCsv({ headers: ["v"], rows: [["=cmd|'/c calc'!A1"], ["@SUM(A1)"], ["+1+1"]] });
+  csv.includes("\t=") && csv.includes("\t@") && csv.includes("\t+")
+    ? ok("every dangerous CSV leader is neutralised")
+    : fail("CSV formula guard", csv);
+}
+
+{
+  // A caption is attacker-controlled and becomes a download filename.
+  const name = suggestFilenameFn(
+    { headers: ["a"], rows: [["1"]], caption: "../../../Windows/System32/evil" },
+    "csv",
+    {}
+  );
+  !name.includes("/") && !name.includes("\\") && !name.includes("..")
+    ? ok("a hostile caption cannot escape the download filename")
+    : fail("filename sanitising", name);
 }
 
 // ── Regressions found by the browser harness ───────────────────────────────

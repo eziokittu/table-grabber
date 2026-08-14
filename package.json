@@ -12,6 +12,8 @@
     "build": "node scripts/check.mjs && node scripts/build.mjs",
     "demo": "node scripts/serve-demo.mjs",
     "e2e": "node scripts/e2e.mjs",
-    "sync": "node scripts/sync-site.mjs"
+    "sync": "node scripts/sync-site.mjs",
+    "screenshots": "node scripts/screenshots.mjs",
+    "promo": "node scripts/make-promo.mjs"
   }
 }
