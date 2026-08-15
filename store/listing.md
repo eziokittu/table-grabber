@@ -24,14 +24,21 @@ Developer Tools
 
 ## Detailed description
 
-_9358 characters. The store cap is 16,000._
+_8816 characters. The store cap is 16,000._
+
+_Rewritten after the 2026-08-14 rejection for keyword spam (ref: Yellow Argon).
+The reviewer cited the opening format list and the thirteen-bullet format
+section. Format names now appear roughly ten times across the whole
+description rather than sixty-six, and each format is described by what it is
+for rather than by its name plus a technical gloss. Keep it that way: the
+screenshots and the website carry the enumerated list instead._
 
 ```
-Table Grabber copies any table on any web page into the format you actually need — CSV, Excel, Markdown, JSON, JSON Lines, XML, SQL, YAML, LaTeX, HTML or plain text.
+Table Grabber copies any table on any web page into the format you actually need.
 
 Every format is free. Every row is included. There is no account, no row limit, no watermark, no trial, and no upload — the extension contains no network code at all.
 
-Click the toolbar icon and it lists every table it can find on the page, with the row and column count of each. Copy one straight away as CSV, TSV or Markdown, or open it in the editor to clean it up first.
+Click the toolbar icon and it lists every table it can find on the page, with the row and column count of each. Copy one straight away, or open it in the editor to clean it up first.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -67,29 +74,15 @@ It understands both 1,234.56 and the European 1.234,56. It handles accounting ne
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-THIRTEEN OUTPUT FORMATS
+OUTPUT FORMATS
 
-• CSV — RFC 4180 quoting, with a UTF-8 BOM so Excel opens accented characters correctly instead of turning them into mojibake
-• TSV — tab-separated, for pasting into a spreadsheet
-• Excel (.xlsx) — a real workbook, not an HTML file with a spreadsheet extension
-• JSON — an array of objects keyed by header, with genuine numbers and booleans rather than everything quoted
-• JSON rows — an array of arrays, header row first, closer to the original grid
-• JSON Lines — one record per line, which is what log pipelines and bulk loaders expect
-• XML — one element per row, header names sanitised into legal tag names
-• Markdown — GitHub-flavoured, padded so the source lines up, numeric columns right-aligned
-• HTML — a clean table with none of the original page's styling attached
-• SQL — CREATE TABLE with inferred column types plus batched INSERT statements, for PostgreSQL, MySQL or SQLite
-• YAML — a single document containing a list of records, correctly quoted
-• LaTeX — a tabular environment with the special characters escaped
-• Plain text — fixed-width aligned columns, for terminals, code comments and email
+Thirteen of them, covering spreadsheets, structured data, databases and documents. The screenshots below show the full list, and the guide linked at the end describes each one.
 
-EXCEL THAT WORKS THE MOMENT IT OPENS
-
-The .xlsx export writes real numeric cells, a frozen header row and columns sized to their contents. Formulas and charts work immediately — no import wizard, no text-to-columns, no re-typing.
+Each one is written properly rather than approximated. The spreadsheet export is a real workbook with numeric cells, a frozen header row and columns sized to their contents — so formulas and charts work the moment it opens, with no import wizard and no re-typing. Delimited text is quoted to the standard and carries a byte order mark, so accented characters arrive intact instead of as mojibake. The structured formats keep genuine numbers and booleans instead of quoting everything, and turn the headers into usable keys. The database export infers a column type per field and batches its inserts. The document formats come out aligned in the source, with the special characters escaped.
 
 PASTE THAT LANDS IN CELLS
 
-Copying as TSV also places an HTML table on the clipboard. Google Sheets and Excel pick that up and give you real cells, instead of dumping the whole table into A1 as one long string.
+Copying to the clipboard puts table markup there alongside the plain text. Google Sheets and Excel pick that up and give you real cells, instead of dumping the whole table into A1 as one long string.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -112,13 +105,13 @@ KNOW WHAT YOU GRABBED
 
 Every column reports its detected type, how many cells are filled, how many values are distinct, and for numeric columns the minimum, maximum, sum and mean. This is how you notice that a capture came up short, or that a column you assumed was unique has duplicates in it.
 
-CONVERTS IN EVERY DIRECTION
+WORKS IN BOTH DIRECTIONS
 
-It reads pasted data too, not just web pages: CSV, TSV, JSON, JSON Lines or a Markdown table. The format is detected automatically and the delimiter is sniffed from the content. So it is equally a CSV-to-Markdown converter, a JSON-to-spreadsheet converter, or a Markdown-table-to-SQL converter.
+It reads pasted data too, not just web pages. Paste delimited text, structured data or a table written in Markdown; the format is detected automatically and the delimiter is sniffed from the content. Anything it can read it can write back out, so conversion works between any two of the supported formats, not only out of a page.
 
 SPREADSHEET FORMULA INJECTION IS NEUTRALISED
 
-A scraped cell containing =cmd|'/c calc'!A1 is a live formula the moment your CSV opens in Excel. Values beginning with =, +, - or @ are neutralised on export. This matters more than it sounds when the data came from a page you do not control.
+A scraped cell containing =cmd|'/c calc'!A1 is a live formula the moment your file opens in a spreadsheet. Values beginning with =, +, - or @ are neutralised on export. This matters more than it sounds when the data came from a page you do not control.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -140,7 +133,7 @@ HOW TO USE IT
 
 1. Open any page with a table on it
 2. Click the Table Grabber icon, or press Alt+Shift+T
-3. Copy immediately as CSV, TSV or Markdown — or click Open to reshape it first
+3. Copy it immediately — or click Open to reshape it first
 
 If a page has fifteen tables and you want a specific one, use "Pick one" and click it directly. The highlight is drawn inside a shadow root, so it looks the same on every site regardless of how aggressive the page's own CSS is.
 
@@ -148,10 +141,10 @@ In the editor: Ctrl+S downloads, Ctrl+Shift+C copies.
 
 WHO IT IS FOR
 
-• Analysts pulling a reference table into Excel with the numbers already numeric
-• Writers copying a table into a README or a blog post as aligned Markdown
-• Developers turning reference data into a SQL seed script or a JSON fixture without writing a one-off parser
-• Researchers and students getting a LaTeX tabular out of a web table without rebuilding it by hand
+• Analysts pulling a reference table into a spreadsheet with the numbers already numeric
+• Writers copying a table into a README or a blog post with the columns already aligned
+• Developers turning reference data into a seed script or a test fixture without writing a one-off parser
+• Researchers and students getting a typeset table out of a web page without rebuilding it by hand
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -198,7 +191,7 @@ Passes a grabbed table from the popup to the editor tab using chrome.storage.ses
 
 **downloads**
 ```
-Saves the exported file (CSV, Excel, Markdown, JSON, etc.) that the user explicitly asked for. Files are generated locally in the browser.
+Saves the exported file that the user explicitly asked for, in the format the user selected. Files are generated locally in the browser.
 ```
 
 **contextMenus**

@@ -220,3 +220,31 @@ in a bug report, a GitHub issues link and a contact link.
 | Misleading screenshots | All four are unedited captures of the real extension |
 | Obfuscated code | Plain readable ES modules, no build step, no minification |
 | Keyword stuffing in the name | Name is a plain description of function |
+| Keyword stuffing in the description | **Rejected once on this, 2026-08-14.** See below |
+
+---
+
+## Rejected 2026-08-14 — keyword spam (ref: Yellow Argon)
+
+Version 1.0.0 was rejected for *"excessive and / or irrelevant keywords in the
+item's description."* The reviewer quoted two passages, both from the detailed
+description: the opening sentence that listed eleven format names, and the
+thirteen-bullet `THIRTEEN OUTPUT FORMATS` section where every bullet led with a
+format name followed by a technical gloss.
+
+Nothing about the package, permissions, privacy or screenshots was faulted —
+this was a listing-copy problem only.
+
+**Fixed in [`listing.md`](listing.md).** Format names went from 66 occurrences
+to about 10 across the description. The formats are now grouped by what they
+are for (spreadsheets, structured data, databases, documents) and described by
+behaviour rather than enumerated by name. The enumerated list lives in
+screenshot 3 and on the website instead.
+
+**The description is a dashboard field, not a manifest field.** Fixing it needs
+no new ZIP and no version bump — paste the new text into Store listing and
+resubmit the same package.
+
+The name and summary still name three or four formats each. Neither was cited,
+so they were left alone; changing the name means a manifest edit, a version
+bump and a fresh upload. If a future rejection cites them, trim there next.
