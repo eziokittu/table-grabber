@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "Table Grabber — Copy & Export Any Table to CSV, Excel, Markdown",
   "short_name": "Table Grabber",
-  "version": "1.0.0",
-  "description": "Copy any web table to CSV, Excel, Markdown, JSON, SQL and more. Unlimited rows, no account, nothing uploaded.",
+  "version": "2.0.0",
+  "description": "Copy any web table to CSV, Excel, Markdown, JSON, SQL and more. Click it, drag a box round it, or paste it. Nothing uploaded.",
   "author": "Bodhisatta Bhattacharjee",
   "homepage_url": "https://glitchbong.com/tools/table-grabber",
   "minimum_chrome_version": "116",
@@ -35,7 +35,7 @@
 
   "web_accessible_resources": [
     {
-      "resources": ["src/shared/*.js"],
+      "resources": ["src/shared/*.js", "src/content/*.js"],
       "matches": ["<all_urls>"]
     }
   ],
@@ -44,6 +44,14 @@
     "_execute_action": {
       "suggested_key": { "default": "Alt+Shift+T" },
       "description": "Open Table Grabber"
+    },
+    "pick-element": {
+      "suggested_key": { "default": "Alt+Shift+G" },
+      "description": "Grab a table by clicking it"
+    },
+    "pick-region": {
+      "suggested_key": { "default": "Alt+Shift+B" },
+      "description": "Grab a table by dragging a box"
     }
   }
 }

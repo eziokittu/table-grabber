@@ -17,7 +17,7 @@
  * limits so a runaway page cannot hang the tab.
  */
 
-import { extractTable, findTables } from "./extract.js";
+import { extractTable, extractGrid, findTables } from "./extract.js";
 import { mergeTables } from "./transform.js";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -87,18 +87,44 @@ export function findScroller(el) {
 }
 
 /**
+ * Reads whatever the target currently shows, whether it is a real table or a
+ * container of repeating boxes.
+ *
+ * The div-grid half of this used to be missing: harvest only ran extractTable,
+ * which returns nothing for a container that is not a <table>, so scrolling an
+ * AG Grid collected zero rows and then confidently replaced a perfectly good
+ * twenty-row capture with an empty one. Every scroll capture on a modern data
+ * grid — the exact case the feature exists for — destroyed the table.
+ */
+function readCurrent(target, options) {
+  const el = target.element;
+  if (target.kind === "grid") {
+    return extractGrid(el, options) || extractTable(el, options);
+  }
+  const table = extractTable(el, options);
+  if (table.rowCount > 0) return table;
+  // A <table> whose body is drawn with divs (it happens) still reads as a grid.
+  return extractGrid(el, options) || table;
+}
+
+/**
  * Scrolls a virtualised table and accumulates every row it renders.
  *
  * Rows are keyed by their library-provided index when one exists, which makes
  * the result exact. Without one we fall back to de-duplicating by content —
  * good enough in practice, but it will collapse genuinely identical rows, so
  * the caller is told which strategy was used.
+ *
+ * The contract that matters: this can come back with *less* than it hoped for,
+ * but never with less than it started with. A capture that goes backwards is
+ * indistinguishable from a broken extension, so if the walk ends up under the
+ * row count we already had, the original is returned untouched.
  */
-export async function captureByScrolling(target, options, onProgress) {
+export async function captureByScrolling(target, options, onProgress, shouldStop) {
   const o = {
-    maxScrolls: 400,
-    settleMs: 90,
-    stepRatio: 0.8,
+    maxScrolls: 600,
+    settleMs: 110,
+    stepRatio: 0.75,
     stallLimit: 4,
     ...(options || {}),
   };
@@ -106,17 +132,17 @@ export async function captureByScrolling(target, options, onProgress) {
   const el = target.element;
   const scroller = findScroller(el);
   if (!scroller) {
-    return { table: target.table, complete: true, strategy: "none", scrolls: 0 };
+    return { table: target.table, complete: true, strategy: "none", scrolls: 0, gained: 0 };
   }
 
   const byIndex = new Map();
   const byContent = new Map();
   let usedIndex = false;
   let headers = target.table.headers;
+  const headerKey = headers.join("\0");
 
   const harvest = () => {
-    const fresh = target.kind === "table" ? extractTable(el, options) : null;
-    const rows = fresh ? fresh.rows : [];
+    const fresh = readCurrent(target, options);
     if (fresh && fresh.headers.some(Boolean)) headers = fresh.headers;
 
     // Prefer real row indices when the grid exposes them.
@@ -133,71 +159,94 @@ export async function captureByScrolling(target, options, onProgress) {
     }
     if (indexed > 0) usedIndex = true;
 
-    for (const row of rows) {
+    for (const row of fresh?.rows || []) {
       const key = row.join("\0");
+      // The header re-appears in every harvest of a grid whose header row is
+      // just another box; adding it once per scroll would pepper the result.
+      if (key === headerKey) continue;
       if (!byContent.has(key)) byContent.set(key, row);
     }
   };
 
+  const count = () => (usedIndex ? byIndex.size : byContent.size);
   const originalTop = scroller.scrollTop;
+
   harvest();
-
-  let stalls = 0;
-  let scrolls = 0;
-  let lastCount = usedIndex ? byIndex.size : byContent.size;
-
   scrollTo(scroller, 0);
   await sleep(o.settleMs);
   harvest();
 
+  let stalls = 0;
+  let scrolls = 0;
+  let stuck = 0;
+  let lastCount = count();
+  let stopped = false;
+
   while (scrolls < o.maxScrolls) {
+    if (shouldStop?.()) { stopped = true; break; }
+
     const viewport = scroller.clientHeight || 600;
     const before = scroller.scrollTop;
     const now = scrollTo(scroller, before + viewport * o.stepRatio);
 
-    // A scroller that will not move is at the end.
     if (now === before) {
       const atBottom = now + scroller.clientHeight >= scroller.scrollHeight - 4;
       if (atBottom) break;
+      // Not at the bottom and refusing to move: the page is holding the
+      // scroller, and grinding out another 400 no-op steps helps nobody.
+      if (++stuck >= 3) break;
+    } else {
+      stuck = 0;
     }
 
     await sleep(o.settleMs);
     harvest();
     scrolls++;
 
-    const count = usedIndex ? byIndex.size : byContent.size;
-    if (onProgress) onProgress({ rows: count, scrolls });
+    const rows = count();
+    if (onProgress) onProgress({ rows, scrolls });
 
-    if (count === lastCount) {
+    if (rows === lastCount) {
       stalls++;
       // Infinite-scroll lists often need a beat to fetch the next page.
-      if (stalls === 2) await sleep(o.settleMs * 4);
+      if (stalls === 2) await sleep(o.settleMs * 5);
       if (stalls >= o.stallLimit) break;
     } else {
       stalls = 0;
-      lastCount = count;
+      lastCount = rows;
     }
   }
 
   scrollTo(scroller, originalTop);
 
-  const rows = usedIndex
+  const collected = usedIndex
     ? [...byIndex.entries()].sort((a, b) => a[0] - b[0]).map(([, cells]) => cells)
     : [...byContent.values()];
 
-  const complete = scrolls < o.maxScrolls;
+  if (collected.length <= target.table.rowCount) {
+    return {
+      table: target.table,
+      complete: !stopped && scrolls < o.maxScrolls,
+      strategy: usedIndex ? "row-index" : "content-dedupe",
+      scrolls,
+      stopped,
+      gained: 0,
+    };
+  }
 
   return {
     table: {
       ...target.table,
       headers,
-      rows,
-      rowCount: rows.length,
+      rows: collected,
+      rowCount: collected.length,
       colCount: headers.length,
     },
-    complete,
+    complete: !stopped && scrolls < o.maxScrolls,
     strategy: usedIndex ? "row-index" : "content-dedupe",
     scrolls,
+    stopped,
+    gained: collected.length - target.table.rowCount,
   };
 }
 
@@ -240,29 +289,53 @@ function looksLikeNext(raw) {
 /** Internals worth asserting on directly. Not part of the runtime API. */
 export const __testables = { looksLikeNext, normaliseLabel };
 
+/**
+ * Whether a control is plausibly *this* table's pager.
+ *
+ * The whole-document fallback below is what finds the pager on pages that put
+ * it in a footer bar rather than beside the table — and also what used to find
+ * some *other* table's "Next" button halfway down the page, so a table with no
+ * pagination at all was offered a "walk every page" button that could only ever
+ * click the wrong thing. Proximity is a cheap way to tell the two apart.
+ */
+function isNearby(control, el) {
+  const a = control.getBoundingClientRect?.();
+  const b = el.getBoundingClientRect?.();
+  // No layout to consult (a parsed document, a test harness): don't second-guess.
+  if (!a || !b || (a.width === 0 && a.height === 0)) return true;
+  const below = a.top >= b.top - 200 && a.top <= b.bottom + 400;
+  const alongside = a.left < b.right + 250 && a.right > b.left - 250;
+  return below && alongside;
+}
+
 /** Finds a clickable "next page" control near a table. */
 export function findNextControl(el) {
   const doc = el.ownerDocument;
-  const scopes = [el.parentElement, el.closest?.("[class*='table' i], [class*='grid' i], section, main, article"), doc.body]
-    .filter(Boolean);
+  const scopes = [
+    { root: el.parentElement, near: false },
+    { root: el.closest?.("[class*='table' i], [class*='grid' i], section, main, article"), near: false },
+    { root: doc.body, near: true },
+  ].filter((s) => s.root);
 
-  for (const scope of scopes) {
+  for (const { root, near } of scopes) {
+    const usable = (c) => isUsableControl(c) && (!near || isNearby(c, el));
+
     for (const sel of NEXT_SELECTORS) {
       let candidates;
       try {
-        candidates = scope.querySelectorAll(sel);
+        candidates = root.querySelectorAll(sel);
       } catch {
         continue;
       }
       for (const c of candidates) {
-        if (isUsableControl(c)) return c;
+        if (usable(c)) return c;
       }
     }
 
-    const clickables = scope.querySelectorAll("a, button, [role='button']");
+    const clickables = root.querySelectorAll("a, button, [role='button']");
     for (const c of clickables) {
       if (looksLikeNext(c.textContent) || looksLikeNext(c.getAttribute("aria-label"))) {
-        if (isUsableControl(c)) return c;
+        if (usable(c)) return c;
       }
     }
   }
@@ -336,8 +409,8 @@ export async function captureByPaging(target, options, onProgress, shouldStop) {
       liveEl = again.element;
     }
 
-    const fresh = extractTable(liveEl, options);
-    if (fresh.rowCount === 0) { complete = true; break; }
+    const fresh = readCurrent({ ...target, element: liveEl }, options);
+    if (!fresh || fresh.rowCount === 0) { complete = true; break; }
 
     pages.push(fresh);
     page++;

@@ -1,38 +1,91 @@
-/* Table Grabber — shared design tokens and primitives.
-   Palette matches glitchbong.com and Storage Inspector, so the family looks
-   like a family. Dark and dense: this is a data tool, so the chrome stays
-   quiet and the values get the contrast. */
+/* Table Grabber — design system.
+ *
+ * Deliberately *not* the glitchbong palette. That site is a dark neon thing;
+ * this is a tool you keep open next to a spreadsheet for twenty minutes while
+ * you clean up a scrape. So: light by default, quiet chrome, one teal accent,
+ * and all the contrast spent on the data itself.
+ *
+ * The dark variant is a token swap at the bottom — every colour below is a
+ * variable precisely so there is exactly one place to redefine them, and no
+ * component needs a `@media` block of its own.
+ */
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  --bg: #0a0510;
-  --bg-deep: #06030b;
-  --surface: #130a1f;
-  --surface-2: #1a0f2a;
-  --surface-3: #221537;
-  --border: rgba(160, 100, 255, 0.16);
-  --border-bright: rgba(160, 100, 255, 0.38);
+  --bg: #f2f5f7;
+  --surface: #ffffff;
+  --surface-2: #f7f9fb;
+  --surface-3: #eaeff3;
+  --surface-hover: #f0f4f7;
+  --border: #dde4ea;
+  --border-strong: #c3ced9;
 
-  --purple: #a855f7;
-  --purple-dim: #7c3aed;
-  --neon: #39ff14;
-  --neon-dim: #26b30f;
-  --yellow: #ffd700;
-  --orange: #ff9f45;
-  --red: #ff5c6c;
-  --blue: #62b6ff;
+  --text: #101820;
+  --text-2: #4c5966;
+  --text-3: #7b8896;
 
-  --text: #f2eafc;
-  --text-2: #b9a6d4;
-  --text-3: #7d6c96;
+  --accent: #0f7a72;
+  --accent-hover: #0c655e;
+  --accent-soft: #e2f2f0;
+  --accent-line: #9dcdc8;
+
+  --amber: #9a6212;
+  --amber-soft: #fdf0da;
+  --red: #b23b39;
+  --red-soft: #fdeceb;
+  --green: #227a4b;
+  --green-soft: #e4f4ea;
+  --blue: #2563c9;
+  --blue-soft: #e8effc;
 
   --mono: ui-monospace, "Cascadia Code", "SF Mono", "Source Code Pro", Menlo, Consolas, monospace;
   --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 
   --radius: 10px;
   --radius-sm: 7px;
-  --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --radius-xs: 5px;
+  --shadow-sm: 0 1px 2px rgba(16, 24, 32, 0.06), 0 1px 3px rgba(16, 24, 32, 0.05);
+  --shadow: 0 6px 18px rgba(16, 24, 32, 0.10), 0 2px 5px rgba(16, 24, 32, 0.06);
+  --shadow-lg: 0 18px 44px rgba(16, 24, 32, 0.18);
+  --ring: 0 0 0 3px rgba(15, 122, 114, 0.22);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --bg: #14181c;
+    --surface: #1b2126;
+    --surface-2: #202730;
+    --surface-3: #2a323b;
+    --surface-hover: #262e37;
+    --border: #313a44;
+    --border-strong: #46525e;
+
+    --text: #eef2f5;
+    --text-2: #b3bfca;
+    --text-3: #85919d;
+
+    --accent: #4fc3b6;
+    --accent-hover: #6fd4c8;
+    --accent-soft: #1d3733;
+    --accent-line: #35635c;
+
+    --amber: #e5b567;
+    --amber-soft: #3a2f1a;
+    --red: #f08a86;
+    --red-soft: #3b2422;
+    --green: #6fce9a;
+    --green-soft: #1e352a;
+    --blue: #7fb0f5;
+    --blue-soft: #1f2c40;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.55);
+    --ring: 0 0 0 3px rgba(79, 195, 182, 0.28);
+  }
 }
 
 *,
@@ -65,11 +118,19 @@ body {
 }
 
 a {
-  color: var(--purple);
+  color: var(--accent);
   text-decoration: none;
 }
 a:hover {
   text-decoration: underline;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 600;
 }
 
 /* ── Buttons ─────────────────────────────────────────────────────────────── */
@@ -77,20 +138,21 @@ a:hover {
 button {
   font-family: inherit;
   font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
-  background: var(--surface-2);
+  background: var(--surface);
   color: var(--text);
-  padding: 7px 12px;
-  transition: background 0.12s, border-color 0.12s, transform 0.06s;
+  padding: 6px 11px;
+  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
 }
 button:hover:not(:disabled) {
-  background: var(--surface-3);
-  border-color: var(--border-bright);
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
 }
 button:active:not(:disabled) {
-  transform: translateY(1px);
+  background: var(--surface-3);
 }
 button:disabled {
   opacity: 0.45;
@@ -98,31 +160,42 @@ button:disabled {
 }
 button:focus-visible,
 select:focus-visible,
-input:focus-visible {
-  outline: 2px solid var(--purple);
-  outline-offset: 2px;
+input:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-color: var(--accent);
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--neon-dim), var(--neon));
-  border-color: transparent;
-  color: #06030b;
-  font-weight: 700;
-}
-.btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--neon), #7dff5c);
-  border-color: transparent;
-}
-
-.btn-purple {
-  background: linear-gradient(135deg, var(--purple-dim), var(--purple));
-  border-color: transparent;
+  background: var(--accent);
+  border-color: var(--accent);
   color: #fff;
   font-weight: 600;
 }
-.btn-purple:hover:not(:disabled) {
-  border-color: transparent;
-  filter: brightness(1.12);
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+.btn-primary:active:not(:disabled) {
+  background: var(--accent-hover);
+}
+@media (prefers-color-scheme: dark) {
+  .btn-primary {
+    color: #0b1416;
+  }
+}
+
+.btn-soft {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent);
+  font-weight: 600;
+}
+.btn-soft:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }
 
 .btn-ghost {
@@ -131,8 +204,14 @@ input:focus-visible {
   color: var(--text-2);
 }
 .btn-ghost:hover:not(:disabled) {
-  background: var(--surface-2);
+  background: var(--surface-3);
+  border-color: transparent;
   color: var(--text);
+}
+
+.btn-tiny {
+  font-size: 11px;
+  padding: 3px 7px;
 }
 
 /* ── Form controls ───────────────────────────────────────────────────────── */
@@ -140,17 +219,23 @@ input:focus-visible {
 input[type="text"],
 input[type="search"],
 input[type="number"],
-select {
+select,
+textarea {
   font-family: inherit;
   font-size: 12px;
   color: var(--text);
-  background: var(--bg-deep);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 6px 9px;
+  transition: border-color 0.12s, box-shadow 0.12s;
 }
-input::placeholder {
+input::placeholder,
+textarea::placeholder {
   color: var(--text-3);
+}
+select {
+  cursor: pointer;
 }
 
 label.check {
@@ -165,10 +250,11 @@ label.check:hover {
   color: var(--text);
 }
 input[type="checkbox"] {
-  accent-color: var(--purple);
+  accent-color: var(--accent);
   width: 14px;
   height: 14px;
   cursor: pointer;
+  flex: none;
 }
 
 /* ── Surfaces ────────────────────────────────────────────────────────────── */
@@ -191,43 +277,59 @@ input[type="checkbox"] {
   color: var(--text-2);
   white-space: nowrap;
 }
-.pill-neon {
-  background: rgba(57, 255, 20, 0.14);
-  color: var(--neon);
+.pill-accent {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 .pill-warn {
-  background: rgba(255, 215, 0, 0.14);
-  color: var(--yellow);
+  background: var(--amber-soft);
+  color: var(--amber);
 }
-.pill-purple {
-  background: rgba(168, 85, 247, 0.18);
-  color: var(--purple);
+.pill-blue {
+  background: var(--blue-soft);
+  color: var(--blue);
 }
 
 .mono {
   font-family: var(--mono);
 }
-
 .muted {
   color: var(--text-3);
+}
+.grow {
+  flex: 1;
+}
+
+.status {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.status.ok {
+  color: var(--green);
+}
+.status.err {
+  color: var(--red);
 }
 
 /* ── Scrollbars ──────────────────────────────────────────────────────────── */
 
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--bg-deep);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--surface-3);
-  border-radius: 6px;
-  border: 2px solid var(--bg-deep);
+  background: var(--border-strong);
+  border-radius: 8px;
+  border: 3px solid var(--bg);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--border-bright);
+  background: var(--text-3);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* ── Utility ─────────────────────────────────────────────────────────────── */
@@ -247,8 +349,8 @@ input[type="checkbox"] {
 .spinner {
   width: 15px;
   height: 15px;
-  border: 2px solid var(--border-bright);
-  border-top-color: var(--neon);
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }

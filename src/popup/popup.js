@@ -1,10 +1,16 @@
 /**
  * Popup controller.
  *
- * Scan on open, list what was found, and offer the three things people want
- * most often (copy as CSV / TSV / Markdown) without a second click. Anything
- * that needs room — renaming columns, filtering, deep capture, other formats —
- * goes to the editor tab.
+ * Two jobs, in order of how often they are wanted: start a pick on the page,
+ * and list what a plain scan already found. The three quick copies (CSV, TSV,
+ * Markdown) are here too because they are one click from the answer; anything
+ * that needs room goes to the editor tab.
+ *
+ * Note what this file does *not* do: wait for the result of a pick. The popup
+ * is closed by the time anyone clicks a table — that is unavoidable, the page
+ * needs the focus — so the page finishes the job itself. The old version
+ * awaited a reply that could never arrive, which is why the pick button looked
+ * broken.
  */
 
 import { copyToClipboard } from "../shared/export.js";
@@ -12,17 +18,11 @@ import { copyToClipboard } from "../shared/export.js";
 const $ = (id) => document.getElementById(id);
 
 const els = {
-  loading: $("loading"),
-  blocked: $("blocked"),
-  blockedMsg: $("blocked-msg"),
-  empty: $("empty"),
-  results: $("results"),
-  list: $("list"),
-  count: $("count"),
-  status: $("status"),
-  rescan: $("rescan"),
-  pick: $("pick"),
-  pickEmpty: $("pick-empty"),
+  loading: $("loading"), blocked: $("blocked"), blockedMsg: $("blocked-msg"),
+  empty: $("empty"), results: $("results"), list: $("list"), count: $("count"),
+  status: $("status"), rescan: $("rescan"),
+  pick: $("pick"), region: $("region"), paste: $("paste"),
+  picking: $("picking"), cancelPick: $("cancel-pick"),
   template: $("row-template"),
 };
 
@@ -66,14 +66,14 @@ function render() {
       `${t.rowCount.toLocaleString()} rows × ${t.colCount} cols`;
 
     const preview = (t.headers || []).filter(Boolean).slice(0, 6).join(" · ");
-    node.querySelector(".item-preview").textContent = preview || "(no headers)";
+    node.querySelector(".item-preview").textContent = preview || "(no column names)";
 
     const badges = node.querySelector(".item-badges");
     if (t.virtualised) {
-      badges.append(badge("partial", "pill-warn", "Only the visible rows are loaded — open the editor to grab them all"));
+      badges.append(badge("partial", "pill-warn", "Only the visible rows are loaded — open the editor to collect them all"));
     }
     if (t.kind === "grid") {
-      badges.append(badge("grid", "pill-purple", "Built from plain boxes rather than a real <table>"));
+      badges.append(badge("grid", "pill-blue", "Built from plain boxes rather than a real <table>"));
     }
     if (t.hasMerges) {
       badges.append(badge("merged", "", "Contains merged cells, which are expanded on export"));
@@ -132,11 +132,26 @@ async function openEditor(id) {
   }
 }
 
-async function pick() {
-  // The picker needs the page, and the popup closing is what gives it focus.
-  const pending = relay({ type: "pick" });
+/**
+ * Hands the page over to the picker and gets out of the way.
+ *
+ * The message is sent and *not* awaited past the send: the popup has to close
+ * for the page to receive the pointer at all, and anything this window is still
+ * waiting for dies with it.
+ */
+async function startPick(mode) {
+  if (!tabId) return;
+  try {
+    await relay({ type: "pick", mode });
+    window.close();
+  } catch {
+    status("This page cannot be picked on.", "err");
+  }
+}
+
+async function openPaste() {
+  await chrome.runtime.sendMessage({ type: "openPaste" });
   window.close();
-  await pending;
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────
@@ -152,8 +167,15 @@ async function scan() {
     if (!ready?.ok) {
       els.blockedMsg.textContent = ready?.error || "This page cannot be read.";
       show("blocked");
+      els.pick.disabled = true;
+      els.region.disabled = true;
       return;
     }
+
+    // A pick already running on the page gets a cancel button here, so the
+    // toolbar icon is always a way *out* of picking as well as in.
+    const state = await relay({ type: "state" });
+    els.picking.hidden = !state?.picking;
 
     const res = await relay({ type: "scan", options: {} });
     if (res?.error) {
@@ -194,7 +216,13 @@ els.list.addEventListener("click", (e) => {
 });
 
 els.rescan.addEventListener("click", scan);
-els.pick.addEventListener("click", pick);
-els.pickEmpty.addEventListener("click", pick);
+els.pick.addEventListener("click", () => startPick("element"));
+els.region.addEventListener("click", () => startPick("region"));
+els.paste.addEventListener("click", openPaste);
+els.cancelPick.addEventListener("click", async () => {
+  await relay({ type: "cancelPick" });
+  els.picking.hidden = true;
+  status("Picking cancelled", "ok");
+});
 
 scan();

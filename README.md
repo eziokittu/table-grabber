@@ -28,6 +28,28 @@ keeping it free costs nothing.
 
 ## What it does
 
+**Three ways to grab something**
+
+- **Click it.** Point at a table; `↑` and `↓` widen or narrow the selection. Any
+  element will do — if it is not a table, it is converted into one.
+- **Drag a box round it.** Anything inside the box is read, table or not. A box
+  across half a table offers both readings, with counts: just the part you
+  covered, or the whole table.
+- **Paste it.** CSV, TSV, JSON, JSON Lines, Markdown or an HTML table, pasted or
+  dropped as a file into the editor.
+
+Every grab ends in a panel that says what it found and how it read it, with copy
+buttons and a way back — including the grabs that fail.
+
+**Rebuilds tables that were never tables**
+
+A price list laid out with flexbox has no rows and no columns, only positions on
+screen — which is exactly what you are using to see the table that is obviously
+there. Region capture clusters the text by those positions: fragments sharing a
+horizontal band are a row, fragments sharing a vertical band are a column. It
+copes with right-aligned number columns, cells of different heights, and values
+that are simply missing.
+
 **Reads any input, writes any output**
 
 Paste a table copied from a web page, or CSV, TSV, JSON, JSON Lines or a
@@ -63,8 +85,11 @@ Multi-row headers are stacked into one name, so a grouped header reads
   survive stray `N/A` placeholders.
 - Optionally rewrites `$1,234.00` → `1234` and `45%` → `45` so spreadsheets
   treat them as numbers rather than text.
-- Rename, reorder and hide columns; filter rows; sort numerically; drop
-  duplicates and empty rows.
+- Rename columns, drag to reorder them, hide them; filter rows; drop duplicates
+  and empty rows.
+- Sort by clicking a column header — numeric columns sort by value, dates
+  chronologically, blanks last, ties keep their order, and the sort stays on the
+  column you chose even as you hide and reorder the ones around it.
 - Reshape: transpose, fill blank cells from the value above, find and replace
   across every cell, trim whitespace, skip leading rows, cap the row count.
 - Rewrite headers to `snake_case`, `camelCase`, `Title Case`, upper or lower, to
@@ -87,7 +112,7 @@ Multi-row headers are stacked into one name, so a grouped header reads
 ```bash
 git clone https://github.com/eziokittu/table-grabber
 cd table-grabber
-npm test        # 80 checks, no dependencies to install
+npm test        # 113 checks, no dependencies to install
 ```
 
 Then load it:
@@ -111,11 +136,17 @@ Then load it:
 | --- | --- |
 | List every table on the page | Click the toolbar icon, or `Alt+Shift+T` |
 | Copy one straight away | `CSV` / `TSV` / `MD` buttons on any table in the popup |
-| Point at a specific table | **Pick one**, then click it on the page |
+| Point at a specific table | **Click a table**, or `Alt+Shift+G` |
+| Grab an area that is not a table | **Drag a box**, or `Alt+Shift+B` |
+| Bring your own data | **Paste data**, or drop a file into the editor |
 | Everything else | **Open →** for the editor |
-| Right-click route | **Grab tables on this page** |
+| Right-click route | Four entries, one per route |
 
-In the editor: `Ctrl/Cmd+S` downloads, `Ctrl/Cmd+Shift+C` copies.
+While picking: `↑` / `↓` widen or narrow the selection, `Enter` takes it, `Esc`
+or right-click or the Cancel button gets you out.
+
+In the editor: click a header to sort, `Ctrl/Cmd+S` downloads,
+`Ctrl/Cmd+Shift+C` copies, `Ctrl/Cmd+F` focuses the filter.
 
 TSV is usually what you want for pasting into Sheets or Excel — the clipboard
 also carries an HTML table, so it lands in real cells rather than one.
@@ -140,37 +171,47 @@ Full detail in [PRIVACY.md](PRIVACY.md).
 src/
   shared/       the engine — no chrome.* APIs, so the identical code runs
     extract.js    finding tables; rowspan/colspan; div grids; shadow DOM
+    region.js     slicing a table to a dragged box; rebuilding one from geometry
     import.js     CSV/TSV/JSON/JSONL/Markdown parsing, format + delimiter sniffing
-    transform.js  typing, cleaning, reshaping, filtering, column statistics
+    transform.js  typing, cleaning, reshaping, filtering, sorting, statistics
     export.js     every output format, including a dependency-free .xlsx writer
     capture.js    scroll-and-accumulate, and pagination walking
-    theme.css     design tokens shared with the rest of the GlitchBong tools
-  content/      injected on demand; picker overlay lives in a shadow root
-  popup/        the table list and quick copy
+    theme.css     design tokens: light, with a dark variant that follows the OS
+  content/
+    content.js    injected on demand; picking, converting, deep capture
+    ui.js         the in-page overlay, drawn inside a shadow root
+  popup/        the three ways in, plus the table list and quick copy
   dashboard/    the editor
-  background/   injection, handoff, context menu
+  background/   injection, handoff, context menu, shortcuts
 scripts/
-  check.mjs     80 assertions, engine tests against a hand-rolled fake DOM
-  e2e.mjs       56 assertions against a real Chrome, over the DevTools Protocol
+  check.mjs     113 assertions, engine tests against a hand-rolled fake DOM
+  e2e.mjs       90 assertions against a real Chrome, over the DevTools Protocol
   probe.mjs     diagnostic harness for "why did that not work in the browser"
   sync-site.mjs copies the engine to the website; --check fails on drift
   build.mjs     zero-dependency ZIP packer
   make-icons.mjs  icons drawn from signed-distance functions, no binaries in git
 ```
 
+Region capture takes its rectangles from a `rectOf` callback rather than calling
+`getBoundingClientRect` itself, which is what keeps the clustering pure enough to
+assert on with plain numbers and no DOM.
+
 ### Testing
 
-`npm test` runs 80 assertions with no browser and no dependencies. `npm run
-e2e` drives a real Chrome over the DevTools Protocol and asserts 56 more:
-that Chrome accepts the manifest, that the content script injects, that a
-merged-cell table comes out aligned, that scrolling a virtualised grid really
-does collect all 500 rows, that pagination walks all three pages, and that the
-`.xlsx` writer emits a valid ZIP inside the browser.
+`npm test` runs 113 assertions with no browser and no dependencies. `npm run
+e2e` drives a real Chrome over the DevTools Protocol and asserts 90 more,
+dispatching genuine input events: that the Cancel button can actually be
+clicked, that `Esc` cancels, that clicking a link while picking does not
+navigate, that a box drawn across half a table offers both readings, that
+clicking a header sorts by value, that scrolling a virtualised grid really does
+collect all 500 rows, and that the `.xlsx` writer emits a valid ZIP inside the
+browser.
 
-Three bugs in this repo were found only by that second suite — a div grid whose
-header row carried a different class, a "Next ›" button the matcher would not
-recognise, and a scroll capture that stalled whenever the tab stopped painting.
-All three now have unit tests too.
+Several bugs in this repo were only ever visible to that second suite — a div
+grid whose header row carried a different class, a "Next ›" button the matcher
+would not recognise, a scroll capture that stalled whenever the tab stopped
+painting, and a `pointerdown` handler that suppressed the very `mousedown` the
+region drag needed. All of them have unit tests now too.
 
 `src/shared/` deliberately contains no `chrome.*` calls. That is what lets the
 same engine run inside the extension and on the

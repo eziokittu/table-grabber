@@ -443,23 +443,17 @@ export function applyState(table, state) {
     });
   }
 
-  if (s.sort && s.sort.column >= 0 && s.sort.column < headers.length) {
-    const col = s.sort.column;
-    const dir = s.sort.direction === "desc" ? -1 : 1;
-    const keptTypes = inferColumnTypes({ headers, rows });
-    const numeric = [TYPES.NUMBER, TYPES.CURRENCY, TYPES.PERCENT].includes(keptTypes[col]);
-
-    rows.sort((a, b) => {
-      const av = a[col] ?? "", bv = b[col] ?? "";
-      if (numeric) {
-        const an = parseNumber(av), bn = parseNumber(bv);
-        if (an === null && bn === null) return 0;
-        if (an === null) return 1;   // blanks last, regardless of direction
-        if (bn === null) return -1;
-        return (an - bn) * dir;
-      }
-      return String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: "base" }) * dir;
-    });
+  // A sort can be pinned to the column's *original* index rather than its
+  // position in the output. That is what lets the editor keep sorting by the
+  // same column while you hide, rename and reorder the ones around it — before
+  // this, hiding a column silently moved the sort onto its neighbour.
+  if (s.sort) {
+    const target = Number.isInteger(s.sort.originalColumn)
+      ? keep.indexOf(s.sort.originalColumn)
+      : s.sort.column;
+    if (Number.isInteger(target) && target >= 0 && target < headers.length) {
+      rows = sortRows(rows, target, s.sort.direction, inferColumnTypes({ headers, rows })[target]);
+    }
   }
 
   if (s.limit > 0) rows = rows.slice(0, s.limit);
@@ -487,8 +481,72 @@ export function applyState(table, state) {
     rowCount: rows.length,
     colCount: headers.length,
     types: inferColumnTypes({ headers, rows }),
+    /** Which original column each output column came from; null once transposed. */
+    columnSources: s.transpose ? null : keep,
     patternError,
   };
+}
+
+// ── Sorting ────────────────────────────────────────────────────────────────
+
+/**
+ * Sorts rows by one column, using what the column *is* rather than how it
+ * happens to be spelled.
+ *
+ * Three things this gets right that a bare `rows.sort()` does not:
+ *
+ *   Numbers sort as numbers.  "$100" after "$9" is the single most obvious way
+ *   for a table tool to look broken.
+ *
+ *   Blanks sink.  A column with holes in it should not open with forty empty
+ *   rows when you sort it descending; empties are absence, not the smallest
+ *   value, so they go last both ways.
+ *
+ *   The sort is stable.  Rows that tie keep the order they arrived in, which is
+ *   what makes sorting by one column and then another behave the way people
+ *   expect. V8's sort is stable, but only for the comparisons it is given —
+ *   returning a nonzero value for equal keys, which locale comparison of
+ *   different strings that compare "equal" can do, breaks it. Decorating with
+ *   the original index removes the question.
+ */
+export function sortRows(rows, column, direction, type) {
+  const dir = direction === "desc" ? -1 : 1;
+  const numeric = [TYPES.NUMBER, TYPES.CURRENCY, TYPES.PERCENT].includes(type);
+  const dated = type === TYPES.DATE;
+
+  const key = (row) => {
+    const raw = String(row[column] ?? "").trim();
+    if (raw === "") return null;
+    if (numeric) return parseNumber(raw);
+    if (dated) {
+      const iso = toIsoDate(raw);
+      if (iso) return iso;
+      const stamp = Date.parse(raw);
+      return Number.isNaN(stamp) ? raw.toLowerCase() : new Date(stamp).toISOString().slice(0, 10);
+    }
+    return raw;
+  };
+
+  return rows
+    .map((row, index) => ({ row, index, key: key(row) }))
+    .sort((a, b) => {
+      // Blanks and unparseable values sink, whichever way the column is sorted.
+      if (a.key === null && b.key === null) return a.index - b.index;
+      if (a.key === null) return 1;
+      if (b.key === null) return -1;
+
+      let cmp;
+      if (typeof a.key === "number" && typeof b.key === "number") {
+        cmp = a.key - b.key;
+      } else {
+        cmp = String(a.key).localeCompare(String(b.key), undefined, {
+          numeric: true,
+          sensitivity: "base",
+        });
+      }
+      return cmp !== 0 ? cmp * dir : a.index - b.index;
+    })
+    .map((entry) => entry.row);
 }
 
 // ── Regex safety ───────────────────────────────────────────────────────────

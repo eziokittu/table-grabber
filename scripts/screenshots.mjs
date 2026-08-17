@@ -115,6 +115,12 @@ async function attach(targetId, renders = true) {
 
   if (renders) {
     await send("Page.enable", {}, sessionId);
+    // The extension follows the OS theme, so a capture on a dark machine and a
+    // capture on a light one disagree. Pin it to light: that is the default the
+    // store listing should show, and it makes these files reproducible.
+    await send("Emulation.setEmulatedMedia", {
+      features: [{ name: "prefers-color-scheme", value: "light" }],
+    }, sessionId).catch(() => {});
     // Pin the rendering surface to exactly the store's size, whatever the OS
     // decided the window chrome should be.
     await send("Emulation.setDeviceMetricsOverride", {
@@ -299,8 +305,14 @@ if (opened === "ok") {
     // over a live capture of the page beneath it, anchored where Chrome would
     // actually draw it. Both halves are real captures; only their arrangement
     // is assembled, and the arrangement is the one the user sees.
+    // The popup is its own native window, so it does not inherit the emulation
+    // applied to page targets — it needs its own, or the listing ends up with a
+    // light editor next to a dark popup.
     const popupSession = await attach(popup.targetId, false);
     await send("Page.enable", {}, popupSession).catch(() => {});
+    await send("Emulation.setEmulatedMedia", {
+      features: [{ name: "prefers-color-scheme", value: "light" }],
+    }, popupSession).catch(() => {});
     await sleep(800);
 
     const listed = await evaluate(
@@ -318,7 +330,7 @@ if (opened === "ok") {
       pageSession,
       `(() => {
          document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-         const overlay = document.getElementById("__table-grabber-overlay");
+         const overlay = document.getElementById("__table-grabber-ui");
          if (overlay) overlay.remove();
          return true;
        })()`
@@ -334,7 +346,7 @@ if (opened === "ok") {
       .pop img { display: block; }
       .notch { position: absolute; top: 8px; right: 92px; width: 0; height: 0;
                border-left: 10px solid transparent; border-right: 10px solid transparent;
-               border-bottom: 12px solid #150a20; filter: drop-shadow(0 -2px 3px rgba(0,0,0,.35)); }
+               border-bottom: 12px solid #ffffff; filter: drop-shadow(0 -2px 3px rgba(0,0,0,.35)); }
     </style>
     <img class="bg" src="data:image/png;base64,${bgPng}">
     <div class="notch"></div>

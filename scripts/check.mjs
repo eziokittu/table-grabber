@@ -648,6 +648,184 @@ section("regressions");
   }
 }
 
+// ── Sorting ────────────────────────────────────────────────────────────────
+//
+// "Sorting doesn't work properly" was the single most common complaint about
+// v1, and it was three separate bugs wearing a coat.
+section("sorting");
+
+{
+  const { sortRows } = await mod("src/shared/transform.js");
+
+  // Ties must keep their original order, or sorting by one column and then
+  // another shuffles the first result away.
+  const stable = sortRows(
+    [["b", "1"], ["a", "2"], ["b", "3"], ["a", "4"]],
+    0, "asc", TYPES.TEXT
+  );
+  stable.map((r) => r[1]).join("") === "2413"
+    ? ok("a tied sort is stable")
+    : fail("a tied sort is stable", JSON.stringify(stable));
+
+  // Blanks are absence, not the smallest value: they sink either way.
+  const asc = sortRows([["b"], [""], ["a"]], 0, "asc", TYPES.TEXT);
+  const desc = sortRows([["b"], [""], ["a"]], 0, "desc", TYPES.TEXT);
+  asc[2][0] === "" && desc[2][0] === ""
+    ? ok("blanks sort last in both directions")
+    : fail("blanks sort last in both directions", JSON.stringify([asc, desc]));
+
+  const dates = sortRows(
+    [["12 March 2024"], ["1 January 2024"], ["5 February 2024"]],
+    0, "asc", TYPES.DATE
+  );
+  dates[0][0] === "1 January 2024" && dates[2][0] === "12 March 2024"
+    ? ok("dates sort chronologically, not alphabetically")
+    : fail("dates sort chronologically", JSON.stringify(dates));
+
+  const numbers = sortRows([["9"], ["100"], ["20"]], 0, "desc", TYPES.NUMBER);
+  numbers[0][0] === "100" && numbers[2][0] === "9"
+    ? ok("descending numeric sort orders by value")
+    : fail("descending numeric sort", JSON.stringify(numbers));
+}
+
+{
+  // A sort pinned to the original column must survive hiding the columns
+  // around it. Before this, hiding column 0 slid the sort onto its neighbour
+  // and the table silently reordered itself by the wrong thing.
+  const table = { headers: ["a", "b", "c"], rows: [["1", "x", "30"], ["2", "y", "10"], ["3", "z", "20"]] };
+  const out = applyState(table, {
+    hiddenColumns: [0],
+    sort: { originalColumn: 2, direction: "asc" },
+    dropEmpty: false,
+  });
+  out.rows.map((r) => r[1]).join(",") === "10,20,30"
+    ? ok("a sort pinned to the original column survives hiding another column")
+    : fail("sort follows the original column", JSON.stringify(out.rows));
+
+  out.columnSources?.join(",") === "1,2"
+    ? ok("applyState reports which original column each output column came from")
+    : fail("columnSources", JSON.stringify(out.columnSources));
+}
+
+// ── Region capture ─────────────────────────────────────────────────────────
+section("region");
+
+{
+  const { synthesiseTable, sliceTable, coverage } = await mod("src/shared/region.js");
+
+  // Text with no markup at all: a header row and two data rows, with the
+  // quantity column right-aligned so its left edges do not line up.
+  const item = (text, left, top, right, bottom) => ({ text, left, top, right, bottom });
+  const built = synthesiseTable([
+    item("Name", 0, 0, 40, 10),
+    item("Qty", 100, 0, 130, 10),
+    item("Bolt", 0, 20, 40, 30),
+    item("5", 120, 20, 130, 30),
+    item("Nut", 0, 40, 40, 50),
+    item("7", 118, 40, 130, 50),
+  ]);
+  built.cols === 2 && built.rows === 2
+    ? ok("layout synthesis finds 2 columns and 2 data rows")
+    : fail("layout synthesis shape", JSON.stringify(built.table));
+  built.table.headers.join(",") === "Name,Qty"
+    ? ok("layout synthesis promotes the top band to headers")
+    : fail("layout synthesis headers", JSON.stringify(built.table.headers));
+  built.table.rows[0].join(",") === "Bolt,5"
+    ? ok("a right-aligned column still lands in one column")
+    : fail("right-aligned column", JSON.stringify(built.table.rows));
+
+  // Fragments on the same visual line but at different heights — an icon next
+  // to a two-line label — belong to the same row.
+  const uneven = synthesiseTable([
+    item("A", 0, 0, 20, 30),
+    item("first", 60, 4, 100, 14),
+    item("B", 0, 40, 20, 70),
+    item("second", 60, 44, 110, 54),
+  ]);
+  uneven.table.rowCount + (uneven.table.headerRowCount || 0) === 2
+    ? ok("rows cluster by overlap, not by matching tops")
+    : fail("row clustering", JSON.stringify(uneven.table));
+
+  // A gap in the data must not shift the row left.
+  const gappy = synthesiseTable([
+    item("h1", 0, 0, 20, 10), item("h2", 50, 0, 70, 10), item("h3", 100, 0, 120, 10),
+    item("a", 0, 20, 20, 30), item("c", 100, 20, 120, 30),
+  ]);
+  gappy.table.rows[0]?.join(",") === "a,,c"
+    ? ok("a missing value leaves a hole rather than shifting the row")
+    : fail("missing value alignment", JSON.stringify(gappy.table.rows));
+
+  coverage({ left: 0, top: 0, right: 10, bottom: 10 }, { left: 0, top: 0, right: 5, bottom: 10 }) === 0.5
+    ? ok("coverage measures the fraction inside the box")
+    : fail("coverage", coverage({ left: 0, top: 0, right: 10, bottom: 10 }, { left: 0, top: 0, right: 5, bottom: 10 }));
+
+  // Slicing a real table: the box covers the last two rows and the last two
+  // columns, and the header comes along whether the box touched it or not.
+  const rects = new Map();
+  const at = (el, left, top, right, bottom) => { rects.set(el, { left, top, right, bottom }); return el; };
+
+  const headRow = tr([th("Country"), th("City"), th("Sales")]);
+  const bodyRows = [
+    tr([td("UK"), td("London"), td("1200")]),
+    tr([td("France"), td("Paris"), td("2400")]),
+    tr([td("Japan"), td("Tokyo"), td("3600")]),
+  ];
+  // Cells get their x from the column, rows their y from the row.
+  [headRow, ...bodyRows].forEach((row, r) => {
+    at(row, 0, r * 20, 300, r * 20 + 20);
+    row.children.forEach((cell, c) => at(cell, c * 100, r * 20, c * 100 + 100, r * 20 + 20));
+  });
+
+  const sliceable = new El("table", {}, [new El("thead", {}, [headRow]), new El("tbody", {}, bodyRows)]);
+  const box = { left: 90, top: 35, right: 310, bottom: 100 };
+  const sliced = sliceTable(sliceable, box, { rectOf: (el) => rects.get(el) || { left: 0, top: 0, right: 0, bottom: 0 } });
+
+  sliced.table.headers.join(",") === "City,Sales"
+    ? ok("slicing keeps only the columns the box covers")
+    : fail("slice columns", JSON.stringify(sliced.table.headers));
+  sliced.table.rowCount === 2 && sliced.table.rows[0][0] === "Paris"
+    ? ok("slicing keeps only the rows the box covers")
+    : fail("slice rows", JSON.stringify(sliced.table.rows));
+  sliced.partial && sliced.rowsTotal === 3 && sliced.colsTotal === 3
+    ? ok("a slice reports what it left behind")
+    : fail("slice reporting", JSON.stringify(sliced));
+}
+
+// ── Grid extraction ────────────────────────────────────────────────────────
+section("grids");
+
+{
+  // extractGrid on a known container is what a scrolling capture re-runs on
+  // every step. It returning nothing for div grids is why scroll capture used
+  // to replace a good table with an empty one.
+  const { extractGrid, tableFromRows } = await mod("src/shared/extract.js");
+  const row = (cls, cells) => new El("div", cls ? { class: cls } : {}, cells.map((c) => new El("span", {}, [text(c)])));
+  const container = new El("div", { class: "grid" }, [
+    row("hd", ["Name", "Role"]),
+    row(null, ["Ada", "Engineer"]),
+    row(null, ["Grace", "Architect"]),
+  ]);
+
+  const grid = extractGrid(container, {});
+  grid && grid.rowCount === 2 && grid.headers.join(",") === "Name,Role"
+    ? ok("extractGrid reads a div grid from a known container")
+    : fail("extractGrid", JSON.stringify(grid));
+
+  extractGrid(new El("div", {}, [new El("p", {}, [text("just prose")])]), {}) === null
+    ? ok("extractGrid refuses something that is not a grid")
+    : fail("extractGrid refuses non-grids");
+
+  const inferred = tableFromRows([["Name", "Qty"], ["Bolt", "5"]], {});
+  inferred.headers.join(",") === "Name,Qty" && inferred.rowCount === 1
+    ? ok("tableFromRows infers a header row")
+    : fail("tableFromRows", JSON.stringify(inferred));
+
+  const numeric = tableFromRows([["1", "2"], ["3", "4"]], {});
+  numeric.rowCount === 2
+    ? ok("tableFromRows keeps a numeric first row as data")
+    : fail("tableFromRows numeric first row", JSON.stringify(numeric));
+}
+
 // ── Result ─────────────────────────────────────────────────────────────────
 console.log("\n" + (failures === 0 ? `All ${checks} checks passed.` : `${failures} of ${checks} checks FAILED.`));
 process.exit(failures === 0 ? 0 : 1);

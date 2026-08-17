@@ -10,20 +10,22 @@
     <header class="head">
       <div class="brand">
         <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
-          <rect x="2.5" y="4" width="19" height="16" rx="2.5" />
-          <line x1="2.5" y1="9.5" x2="21.5" y2="9.5" />
-          <line x1="9" y1="9.5" x2="9" y2="20" />
-          <line x1="15" y1="9.5" x2="15" y2="20" />
+          <rect class="plate" x="2" y="3.5" width="20" height="17" rx="3" />
+          <path class="line" d="M2 9.25h20M8.5 9.25V20.5M15.5 9.25V20.5" />
+          <rect class="row" x="5" y="14.5" width="17" height="4.4" rx="1.6" />
         </svg>
         <span>Table Grabber</span>
       </div>
+
       <div class="source">
         <span id="source-title" class="source-title"></span>
         <a id="source-url" class="source-url mono" target="_blank" rel="noopener"></a>
       </div>
+
       <div class="head-stats">
-        <span id="stat-rows" class="pill pill-neon">0 rows</span>
+        <span id="stat-rows" class="pill pill-accent">0 rows</span>
         <span id="stat-cols" class="pill">0 cols</span>
+        <button id="open-paste" class="btn-tiny" title="Replace this with data you paste or drop">Paste / import</button>
       </div>
     </header>
 
@@ -33,33 +35,35 @@
     </div>
 
     <div id="error" class="state" hidden>
-      <span class="state-icon" aria-hidden="true">⚠️</span>
       <p id="error-msg"></p>
+      <button id="error-paste" class="btn-primary">Paste data instead</button>
     </div>
 
     <div id="app" class="app" hidden>
-      <!-- ── Column panel ──────────────────────────────────────────────── -->
+      <!-- ── Side panel ────────────────────────────────────────────────── -->
       <aside class="panel">
-        <div class="panel-section" id="deep-section" hidden>
+        <section class="panel-section deep" id="deep-section" hidden>
           <h2>Missing rows?</h2>
           <p class="hint" id="deep-hint"></p>
           <div class="opts">
-            <button id="deep-scroll" class="btn-purple full">Scroll for all rows</button>
-            <button id="deep-page" class="btn-purple full" hidden>Walk every page</button>
+            <button id="deep-scroll" class="btn-primary full">Collect all rows</button>
+            <button id="deep-page" class="full" hidden>Walk every page</button>
           </div>
           <p id="deep-status" class="hint" role="status" aria-live="polite"></p>
-        </div>
+        </section>
 
         <details class="panel-section" open>
           <summary>
             <h2>Columns</h2>
             <span class="panel-head-actions">
-              <button id="cols-all" class="btn-ghost tiny" type="button">All</button>
-              <button id="cols-none" class="btn-ghost tiny" type="button">None</button>
+              <button id="cols-all" class="btn-ghost btn-tiny" type="button">All</button>
+              <button id="cols-none" class="btn-ghost btn-tiny" type="button">None</button>
+              <button id="cols-reset" class="btn-ghost btn-tiny" type="button" title="Back to the page's own order and names">Reset</button>
             </span>
           </summary>
           <ul id="columns" class="columns"></ul>
-          <label class="check" style="margin-top: 10px">
+          <p class="hint">Drag to reorder. Click a name to rename it.</p>
+          <label class="check spaced">
             <span class="muted">Name style</span>
             <select id="opt-header-case" aria-label="Header name style">
               <option value="none">As found</option>
@@ -132,36 +136,33 @@
             </label>
             <label class="check">
               <span class="muted">Skip first</span>
-              <input type="number" id="opt-skip" value="0" min="0" step="1" style="width: 70px" aria-label="Skip rows" />
+              <input type="number" id="opt-skip" value="0" min="0" step="1" aria-label="Skip rows" />
               <span class="muted">rows</span>
             </label>
             <label class="check">
               <span class="muted">Keep first</span>
-              <input type="number" id="opt-limit" value="0" min="0" step="1" style="width: 70px" aria-label="Row limit" />
+              <input type="number" id="opt-limit" value="0" min="0" step="1" aria-label="Row limit" />
               <span class="muted">(0 = all)</span>
             </label>
           </div>
         </details>
+
+        <button id="reset-all" class="btn-ghost btn-tiny reset-all" type="button">Reset every setting</button>
       </aside>
 
       <!-- ── Preview ───────────────────────────────────────────────────── -->
       <main class="main">
         <div class="toolbar">
           <input type="search" id="search" placeholder="Filter rows…" aria-label="Filter rows" />
-          <select id="sort-col" aria-label="Sort by column">
-            <option value="-1">No sort</option>
-          </select>
-          <select id="sort-dir" aria-label="Sort direction">
-            <option value="asc">Ascending</option>
-            <option value="desc">Descending</option>
-          </select>
+          <button id="sort-chip" class="chip" type="button" hidden></button>
           <span class="grow"></span>
           <label class="check" title="How many rows to draw here. Exports always include every row.">
             <span class="muted">Preview</span>
             <select id="preview-rows" aria-label="Preview row count">
-              <option value="100">100</option>
-              <option value="500" selected>500</option>
-              <option value="2000">2,000</option>
+              <option value="100">100 rows</option>
+              <option value="500" selected>500 rows</option>
+              <option value="2000">2,000 rows</option>
+              <option value="100000">Everything</option>
             </select>
           </label>
         </div>
@@ -171,8 +172,10 @@
             <thead id="grid-head"></thead>
             <tbody id="grid-body"></tbody>
           </table>
-          <p id="grid-note" class="grid-note"></p>
+          <p id="grid-empty" class="grid-empty" hidden></p>
         </div>
+
+        <p id="grid-note" class="grid-note"></p>
       </main>
     </div>
 
@@ -215,9 +218,48 @@
       <span class="grow"></span>
 
       <span id="export-status" class="status" role="status" aria-live="polite"></span>
-      <button id="copy" class="btn-purple">Copy</button>
+      <button id="copy">Copy</button>
       <button id="download" class="btn-primary">Download</button>
     </footer>
+
+    <!-- ── Paste / import ──────────────────────────────────────────────── -->
+    <dialog id="paste-dialog" class="dialog">
+      <form method="dialog" class="dialog-inner">
+        <h2 class="dialog-title">Paste or drop your data</h2>
+        <p class="hint">
+          CSV, TSV, JSON, JSON Lines, Markdown or an HTML table. Everything below is read in this
+          tab — nothing is uploaded.
+        </p>
+
+        <textarea id="paste-text" rows="10" spellcheck="false"
+          placeholder="Paste here…&#10;&#10;name,qty&#10;Bolt,5&#10;Nut,7"></textarea>
+
+        <div class="dialog-row">
+          <label class="check">
+            <span class="muted">Read as</span>
+            <select id="paste-format"></select>
+          </label>
+          <label class="check">
+            <span class="muted">First row</span>
+            <select id="paste-header">
+              <option value="auto">Detect</option>
+              <option value="yes">Is a header</option>
+              <option value="no">Is data</option>
+            </select>
+          </label>
+          <span class="grow"></span>
+          <input type="file" id="paste-file" accept=".csv,.tsv,.txt,.json,.jsonl,.ndjson,.md,.markdown,.html,.htm" hidden />
+          <button type="button" id="paste-browse" class="btn-tiny">Choose a file…</button>
+        </div>
+
+        <p id="paste-status" class="status" role="status" aria-live="polite"></p>
+
+        <div class="dialog-foot">
+          <button type="button" id="paste-cancel">Cancel</button>
+          <button type="button" id="paste-go" class="btn-primary">Use this data</button>
+        </div>
+      </form>
+    </dialog>
 
     <script type="module" src="dashboard.js"></script>
   </body>

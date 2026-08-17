@@ -42,8 +42,8 @@ const SHARED_CSS = `
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-    background: #0a0008;
-    color: #f0e6ff;
+    background: #0c1a1d;
+    color: #eaf5f3;
     overflow: hidden;
   }
   .tile {
@@ -51,34 +51,34 @@ const SHARED_CSS = `
     position: relative;
     display: flex; align-items: center;
     background:
-      radial-gradient(ellipse 70% 90% at 15% 30%, rgba(124,58,237,.42) 0%, transparent 62%),
-      radial-gradient(ellipse 60% 80% at 88% 78%, rgba(57,255,20,.16) 0%, transparent 62%),
-      #0a0008;
+      radial-gradient(ellipse 70% 90% at 15% 30%, rgba(23,140,130,.48) 0%, transparent 62%),
+      radial-gradient(ellipse 60% 80% at 88% 78%, rgba(255,200,87,.14) 0%, transparent 62%),
+      #0c1a1d;
     overflow: hidden;
   }
   /* A faint grid, echoing the product. */
   .tile::before {
     content: ""; position: absolute; inset: 0;
     background-image:
-      linear-gradient(rgba(168,85,247,.10) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(168,85,247,.10) 1px, transparent 1px);
+      linear-gradient(rgba(160,220,214,.10) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(160,220,214,.10) 1px, transparent 1px);
     background-size: 34px 34px;
     mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, #000 30%, transparent 75%);
   }
   .inner { position: relative; z-index: 1; display: flex; align-items: center; }
   .name { font-weight: 800; letter-spacing: -.02em; line-height: 1; }
-  .name .a { color: #a855f7; }
-  .name .b { color: #39ff14; }
-  .tag { color: #cdb8e8; font-weight: 500; }
+  .name .a { color: #eaf5f3; }
+  .name .b { color: #55c9bb; }
+  .tag { color: #b6cecb; font-weight: 500; }
   .chips { display: flex; flex-wrap: wrap; }
   .chip {
-    color: #d8c7f0; font-weight: 600;
-    background: rgba(168,85,247,.15);
-    border: 1px solid rgba(168,85,247,.38);
+    color: #cfe6e3; font-weight: 600;
+    background: rgba(85,201,187,.14);
+    border: 1px solid rgba(85,201,187,.36);
     border-radius: 999px; white-space: nowrap;
   }
   .free {
-    color: #06030b; background: #39ff14; font-weight: 800;
+    color: #241703; background: #ffc857; font-weight: 800;
     border-radius: 999px; white-space: nowrap;
   }
   img.mark { display: block; }
@@ -116,21 +116,21 @@ const marquee = `<!doctype html><meta charset="utf-8"><style>${SHARED_CSS}
   .free { font-size: 19px; padding: 8px 22px; }
   /* A miniature of the real thing, so the tile shows the product. */
   .preview {
-    background: #130a1f; border: 1px solid rgba(168,85,247,.4);
+    background: #10262a; border: 1px solid rgba(85,201,187,.38);
     border-radius: 14px; overflow: hidden; flex-shrink: 0;
     box-shadow: 0 30px 70px rgba(0,0,0,.6);
     font-family: ui-monospace, Consolas, monospace; font-size: 16px;
   }
   .preview .bar {
-    background: rgba(168,85,247,.18); padding: 9px 16px;
-    font-family: "Segoe UI", sans-serif; font-size: 14px; font-weight: 700; color: #d8c7f0;
-    border-bottom: 1px solid rgba(168,85,247,.3);
+    background: rgba(85,201,187,.16); padding: 9px 16px;
+    font-family: "Segoe UI", sans-serif; font-size: 14px; font-weight: 700; color: #cfe6e3;
+    border-bottom: 1px solid rgba(85,201,187,.28);
   }
   table { border-collapse: collapse; }
-  th, td { padding: 9px 18px; border-bottom: 1px solid rgba(168,85,247,.16); text-align: left; }
-  th { color: #b9a6d4; font-family: "Segoe UI", sans-serif; font-size: 13.5px; font-weight: 700; }
-  td { color: #f0e6ff; }
-  td.n { text-align: right; color: #39ff14; }
+  th, td { padding: 9px 18px; border-bottom: 1px solid rgba(85,201,187,.16); text-align: left; }
+  th { color: #9fbdb9; font-family: "Segoe UI", sans-serif; font-size: 13.5px; font-weight: 700; }
+  td { color: #eaf5f3; }
+  td.n { text-align: right; color: #ffc857; }
 </style>
 <div class="tile"><div class="inner">
   <div class="left">

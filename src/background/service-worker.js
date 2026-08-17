@@ -3,7 +3,7 @@
  *
  * Deliberately thin. It exists to do the three things a page cannot: inject the
  * content script when you ask for it, hand a captured table to the editor tab,
- * and drive the context menu.
+ * and drive the context menu and keyboard shortcuts.
  *
  * It holds no data of its own beyond a short-lived handoff, and it never talks
  * to the network — there is nothing here to talk to.
@@ -25,7 +25,7 @@ const DASHBOARD = "src/dashboard/dashboard.html";
 async function ensureInjected(tabId) {
   try {
     const pong = await chrome.tabs.sendMessage(tabId, { type: "ping" });
-    if (pong?.ok) return { ok: true };
+    if (pong?.ok) return { ok: true, picking: !!pong.picking };
   } catch {
     /* not injected yet */
   }
@@ -35,7 +35,7 @@ async function ensureInjected(tabId) {
       target: { tabId, allFrames: false },
       files: [CONTENT_SCRIPT],
     });
-    return { ok: true };
+    return { ok: true, picking: false };
   } catch (e) {
     const msg = String(e?.message || e);
     if (/chrome:\/\/|chrome-extension:\/\/|edge:\/\/|about:|Cannot access|extension manifest/i.test(msg)) {
@@ -59,6 +59,11 @@ async function send(tabId, message) {
   }
 }
 
+async function activeTabId() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  return tab?.id ?? null;
+}
+
 // ── Handoff to the editor ──────────────────────────────────────────────────
 
 /**
@@ -75,7 +80,7 @@ async function handoff(payload) {
     await chrome.storage.session.set({ [key]: payload });
   } catch {
     // Over quota. The editor will fall back to fetching from the source tab.
-    return { key: null, ...payload };
+    return { key: null };
   }
   return { key };
 }
@@ -86,6 +91,7 @@ async function openDashboard(payload) {
   if (key) params.set("k", key);
   if (payload.sourceTabId) params.set("tab", String(payload.sourceTabId));
   if (payload.tableId) params.set("id", payload.tableId);
+  if (payload.paste) params.set("paste", "1");
 
   await chrome.tabs.create({ url: chrome.runtime.getURL(`${DASHBOARD}?${params}`) });
 }
@@ -108,6 +114,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         sendResponse({ ok: true });
         break;
 
+      /**
+       * The page grabbed something itself and wants the editor.
+       *
+       * The tab id comes from `sender`, not from the message: the popup that
+       * started the pick is long gone by the time anyone clicks a table, so
+       * there is nobody left to tell us which tab this is.
+       */
+      case "openFromPage":
+        await openDashboard({ ...msg.payload, sourceTabId: sender?.tab?.id ?? null });
+        sendResponse({ ok: true });
+        break;
+
+      case "openPaste":
+        await openDashboard({ paste: true });
+        sendResponse({ ok: true });
+        break;
+
       case "fetchHandoff": {
         const got = await chrome.storage.session.get(msg.key);
         // One-shot: drop it as soon as the editor has it.
@@ -125,33 +148,47 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 // ── Context menu ───────────────────────────────────────────────────────────
 
-const MENU_ID = "table-grabber-grab";
+const MENUS = {
+  pick: "tg-pick",
+  region: "tg-region",
+  all: "tg-all",
+  paste: "tg-paste",
+};
 
-function createMenu() {
+function createMenus() {
   chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({
-      id: MENU_ID,
-      title: "Grab tables on this page",
-      contexts: ["page", "selection", "link", "image"],
-    });
+    const contexts = ["page", "selection", "link", "image"];
+    chrome.contextMenus.create({ id: MENUS.pick, title: "Grab a table — click one", contexts });
+    chrome.contextMenus.create({ id: MENUS.region, title: "Grab a table — drag a box", contexts });
+    chrome.contextMenus.create({ id: MENUS.all, title: "Open the biggest table in the editor", contexts });
+    chrome.contextMenus.create({ id: MENUS.paste, title: "Paste data into Table Grabber", contexts });
   });
 }
 
 chrome.runtime.onInstalled.addListener((details) => {
-  createMenu();
+  createMenus();
   // Send first-time users to the guide rather than leaving them staring at an
   // empty popup wondering what to do.
   if (details.reason === "install") {
     chrome.tabs.create({ url: "https://glitchbong.com/tools/table-grabber?installed=1" });
   }
 });
-chrome.runtime.onStartup.addListener(createMenu);
+chrome.runtime.onStartup.addListener(createMenus);
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  if (info.menuItemId !== MENU_ID || !tab?.id) return;
+  if (!tab?.id) return;
+
+  if (info.menuItemId === MENUS.pick) return void send(tab.id, { type: "pick", mode: "element" });
+  if (info.menuItemId === MENUS.region) return void send(tab.id, { type: "pick", mode: "region" });
+  if (info.menuItemId === MENUS.paste) return void openDashboard({ paste: true });
+  if (info.menuItemId !== MENUS.all) return;
 
   const res = await send(tab.id, { type: "scan", options: {} });
-  if (res?.error || !res?.tables?.length) return;
+  if (res?.error || !res?.tables?.length) {
+    // Nothing to open. Rather than failing silently, hand them the picker,
+    // which can read the things the scanner cannot.
+    return void send(tab.id, { type: "pick", mode: "element" });
+  }
 
   // Open the biggest table — on a page with several, that is almost always the
   // one someone right-clicked to get.
@@ -165,4 +202,13 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     sourceTabId: tab.id,
     source: { url: tab.url, title: tab.title },
   });
+});
+
+// ── Keyboard shortcuts ─────────────────────────────────────────────────────
+
+chrome.commands?.onCommand.addListener(async (command) => {
+  const tabId = await activeTabId();
+  if (!tabId) return;
+  if (command === "pick-element") await send(tabId, { type: "pick", mode: "element" });
+  if (command === "pick-region") await send(tabId, { type: "pick", mode: "region" });
 });

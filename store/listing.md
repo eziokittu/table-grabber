@@ -12,10 +12,10 @@ comparison instead.
 Table Grabber — Copy & Export Any Table to CSV, Excel, Markdown
 ```
 
-## Short description (109 / 132)
+## Short description (125 / 132)
 
 ```
-Copy any web table to CSV, Excel, Markdown, JSON, SQL and more. Unlimited rows, no account, nothing uploaded.
+Copy any web table to CSV, Excel, Markdown, JSON, SQL and more. Click it, drag a box round it, or paste it. Nothing uploaded.
 ```
 
 ## Category
@@ -24,7 +24,7 @@ Developer Tools
 
 ## Detailed description
 
-_8816 characters. The store cap is 16,000._
+_10,688 characters. The store cap is 16,000._
 
 _Rewritten after the 2026-08-14 rejection for keyword spam (ref: Yellow Argon).
 The reviewer cited the opening format list and the thirteen-bullet format
@@ -39,6 +39,26 @@ Table Grabber copies any table on any web page into the format you actually need
 Every format is free. Every row is included. There is no account, no row limit, no watermark, no trial, and no upload — the extension contains no network code at all.
 
 Click the toolbar icon and it lists every table it can find on the page, with the row and column count of each. Copy one straight away, or open it in the editor to clean it up first.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+THREE WAYS TO GRAB SOMETHING
+
+CLICK IT
+
+Point at the table you want and click. The selection is outlined as you move, with its row and column count, and the arrow keys widen or narrow it if the outline lands on the wrong container. Any element can be selected — if it is not a table, it is converted into one.
+
+DRAG A BOX ROUND IT
+
+Not everything that looks like a table is one. A price list built with flexbox, a block of stat tiles, a receipt in fixed-width text: none of these have rows or columns in the markup, only positions on the screen — which is exactly what you are reading them by. Drag a box and the text inside it is rebuilt into a table from those positions, coping with right-aligned number columns, cells of different heights, and gaps where a value is simply missing.
+
+If the box covers only part of a real table, both readings are offered with their row and column counts: just the part you covered, or the whole table. Neither is guessed at silently.
+
+PASTE IT
+
+The editor takes data you bring yourself: delimited text, structured data, a table written in Markdown, or table markup copied from anywhere. Drop a file onto it and it reads that too.
+
+Every grab ends the same way — a panel showing what was found and how it was read, with copy buttons and a way back, including the attempts that find nothing. Nothing leaves you staring at a dimmed page wondering whether it worked.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -90,9 +110,9 @@ CLEAN IT UP BEFORE YOU EXPORT
 
 The editor shows a live preview and never alters the original page.
 
-• Rename, hide and reorder columns
+• Rename and hide columns, and drag them into the order you want
 • Filter rows by a search term
-• Sort numerically, so 9 comes before 100 rather than after it
+• Sort by clicking a column header: numbers by value so 9 comes before 100, dates by date rather than by spelling, blanks last, and ties left in the order they arrived
 • Remove duplicate rows and empty rows or columns
 • Fill blank cells from the value above
 • Find and replace across every cell, with optional regular expressions and case sensitivity
@@ -119,7 +139,7 @@ PRIVACY, STATED PRECISELY
 
 Table Grabber installs with access to no websites at all. There is no host permission in its manifest, which means adding it grants nothing, nothing runs in the background, and no page is touched until you ask.
 
-It reads a page only when you click the toolbar icon, press Alt+Shift+T, or choose the right-click menu item — and only that one tab, in that one moment.
+It reads a page only when you click the toolbar icon, press one of its keyboard shortcuts, or choose a right-click menu item — and only that one tab, in that one moment.
 
 It contains no network code whatsoever. No fetch, no XMLHttpRequest, no WebSocket, no beacons, no analytics, no telemetry, no accounts, no identifiers, no error reporting. This is not a promise about intentions: it is enforced by an automated check that fails the build if any network call appears anywhere in the source.
 
@@ -135,9 +155,9 @@ HOW TO USE IT
 2. Click the Table Grabber icon, or press Alt+Shift+T
 3. Copy it immediately — or click Open to reshape it first
 
-If a page has fifteen tables and you want a specific one, use "Pick one" and click it directly. The highlight is drawn inside a shadow root, so it looks the same on every site regardless of how aggressive the page's own CSS is.
+If a page has fifteen tables and you want a specific one, choose "Click a table" and click it directly. If what you want is not a table at all, choose "Drag a box" and draw one round it. The outline and the controls are drawn inside a shadow root, so they look and behave the same on every site regardless of how aggressive the page's own CSS is — and picking can always be stopped, with the Cancel button, the Escape key, or a right-click.
 
-In the editor: Ctrl+S downloads, Ctrl+Shift+C copies.
+In the editor: click a column header to sort by it, Ctrl+S downloads, Ctrl+Shift+C copies, Ctrl+F jumps to the row filter.
 
 WHO IT IS FOR
 
@@ -196,7 +216,7 @@ Saves the exported file that the user explicitly asked for, in the format the us
 
 **contextMenus**
 ```
-Adds a single "Grab tables on this page" right-click item as an alternative way to invoke the extension.
+Adds right-click items as an alternative way to invoke the extension: pick a table by clicking it, grab an area by dragging a box, open the largest table on the page, or paste your own data.
 ```
 
 **Remote code**

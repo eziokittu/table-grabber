@@ -152,8 +152,14 @@ function firstLink(el) {
  *
  * This is the step every naive table scraper skips, and it is why their output
  * shifts left on any table with a merged header.
+ *
+ * Exported because the region picker needs the same coordinate map: to work out
+ * which rows and columns a dragged box covers, it has to know which element is
+ * at each grid position, spans and all.
+ *
+ * @returns {{grid: Element[][], meta: object[][], rowEls: Element[], width: number}}
  */
-function buildGrid(tableEl) {
+export function buildCellGrid(tableEl) {
   const rowEls = [];
   // Walk sections in document order so thead/tbody/tfoot come out right. Rows
   // belonging to a *nested* table must not be swept up.
@@ -209,7 +215,7 @@ function buildGrid(tableEl) {
  * short non-numeric strings while the row below has numbers, is a header —
  * which is the shape of nearly every real data table.
  */
-function detectHeaderRows(tableEl, grid, rowEls, opts) {
+export function detectHeaderRows(tableEl, grid, rowEls, opts) {
   const thead = [...tableEl.children].find((c) => c.tagName === "THEAD");
   if (thead) {
     const count = [...thead.querySelectorAll("tr")].length;
@@ -269,7 +275,7 @@ export function uniqueHeaders(names) {
  */
 export function extractTable(tableEl, options) {
   const opts = { ...DEFAULT_OPTIONS, ...(options || {}) };
-  const { grid, meta, rowEls, width } = buildGrid(tableEl);
+  const { grid, meta, rowEls, width } = buildCellGrid(tableEl);
   if (width === 0 || grid.length === 0) {
     return { headers: [], rows: [], rowCount: 0, colCount: 0, headerRowCount: 0, hasMerges: false, caption: "" };
   }
@@ -362,48 +368,8 @@ function findDivGrids(root, opts) {
   if (!containers) return found;
 
   for (const container of containers) {
-    const children = [...container.children].filter(
-      (c) => c.tagName !== "SCRIPT" && c.tagName !== "STYLE" && c.tagName !== "TEMPLATE"
-    );
-    if (children.length < Math.max(2, opts.minRows)) continue;
-    if (children.length > 5000) continue;
-
-    // Rows must look alike — but compare against the *most common* shape, not
-    // the first child. Header rows almost always carry an extra class, and
-    // anchoring on child[0] threw away every grid with a styled header.
-    const sig = (el) => `${el.tagName}|${[...el.classList].slice(0, 3).sort().join(".")}`;
-    const counts = new Map();
-    for (const c of children) counts.set(sig(c), (counts.get(sig(c)) || 0) + 1);
-    const modal = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
-
-    const body = children.filter((c) => sig(c) === modal);
-    if (body.length < Math.max(2, opts.minRows)) continue;
-
-    // A differently-shaped first child is a header, so keep it; anything else
-    // that does not match the modal shape is chrome and is dropped.
-    const header = children[0] !== body[0] && sig(children[0]) !== modal ? children[0] : null;
-    const sameShape = header ? [header, ...body] : body;
-    if (sameShape.length < children.length * 0.8) continue;
-
-    // Each row must hold the same number of cells, and more than one.
-    const widths = sameShape.slice(0, 20).map((r) => [...r.children].length);
-    const cols = widths[0];
-    if (!cols || cols < opts.minCols) continue;
-    if (!widths.every((w) => w === cols)) continue;
-
-    // Skip anything that is really a <table> we already handle, or a nav list.
-    if (container.closest?.("table")) continue;
-
-    const rows = sameShape.map((rowEl) => [...rowEl.children].map((cell) => cellText(cell, opts)));
-    const nonEmpty = rows.filter((r) => r.some((v) => v !== ""));
-    if (nonEmpty.length < opts.minRows) continue;
-
-    // Reject "grids" that are actually a wall of empty boxes or a card list
-    // where each card is one blob of text.
-    const filled = nonEmpty.flat().filter((v) => v !== "").length;
-    if (filled < nonEmpty.length * cols * 0.4) continue;
-
-    found.push({ element: container, rows: nonEmpty, cols });
+    const shape = gridShapeOf(container, opts);
+    if (shape) found.push(shape);
   }
 
   // Keep only the outermost of any nested matches — an AG Grid matches at
@@ -411,30 +377,114 @@ function findDivGrids(root, opts) {
   return found.filter((f) => !found.some((o) => o !== f && o.element.contains(f.element)));
 }
 
+/**
+ * Reads one container as a grid of strings, or returns null if it does not look
+ * like one.
+ *
+ * Split out of findDivGrids so the same judgement can be applied to a single
+ * element the user pointed at, and re-applied to that same element on every
+ * step of a scrolling capture. Before this existed, a scroll capture of a div
+ * grid harvested nothing at all and cheerfully replaced the table with zero
+ * rows.
+ *
+ * @returns {{element: Element, rows: string[][], cols: number}|null}
+ */
+export function gridShapeOf(container, options) {
+  const opts = { ...DEFAULT_OPTIONS, ...(options || {}) };
+
+  const children = [...(container.children || [])].filter(
+    (c) => c.tagName !== "SCRIPT" && c.tagName !== "STYLE" && c.tagName !== "TEMPLATE"
+  );
+  if (children.length < Math.max(2, opts.minRows)) return null;
+  if (children.length > 20000) return null;
+
+  // Rows must look alike — but compare against the *most common* shape, not
+  // the first child. Header rows almost always carry an extra class, and
+  // anchoring on child[0] threw away every grid with a styled header.
+  const sig = (el) => `${el.tagName}|${[...el.classList].slice(0, 3).sort().join(".")}`;
+  const counts = new Map();
+  for (const c of children) counts.set(sig(c), (counts.get(sig(c)) || 0) + 1);
+  const modal = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+
+  const body = children.filter((c) => sig(c) === modal);
+  if (body.length < Math.max(2, opts.minRows)) return null;
+
+  // A differently-shaped first child is a header, so keep it; anything else
+  // that does not match the modal shape is chrome and is dropped.
+  const header = children[0] !== body[0] && sig(children[0]) !== modal ? children[0] : null;
+  const sameShape = header ? [header, ...body] : body;
+  if (sameShape.length < children.length * 0.8) return null;
+
+  // Each row must hold the same number of cells, and more than one.
+  const widths = sameShape.slice(0, 20).map((r) => [...r.children].length);
+  const cols = widths[0];
+  if (!cols || cols < opts.minCols) return null;
+  if (!widths.every((w) => w === cols)) return null;
+
+  // Skip anything that is really a <table> we already handle, or a nav list.
+  if (container.closest?.("table")) return null;
+
+  const rows = sameShape.map((rowEl) => [...rowEl.children].map((cell) => cellText(cell, opts)));
+  const nonEmpty = rows.filter((r) => r.some((v) => v !== ""));
+  if (nonEmpty.length < opts.minRows) return null;
+
+  // Reject "grids" that are actually a wall of empty boxes or a card list
+  // where each card is one blob of text.
+  const filled = nonEmpty.flat().filter((v) => v !== "").length;
+  if (filled < nonEmpty.length * cols * 0.4) return null;
+
+  return { element: container, rows: nonEmpty, cols };
+}
+
+/**
+ * Turns a container of repeating boxes into a table, or returns null.
+ * The div-grid counterpart of extractTable.
+ */
+export function extractGrid(container, options) {
+  const opts = { ...DEFAULT_OPTIONS, ...(options || {}) };
+  const shape = gridShapeOf(container, opts);
+  return shape ? divGridToTable(shape, opts) : null;
+}
+
 function divGridToTable(grid, opts) {
-  const rows = grid.rows;
-  let headers;
-  let body;
+  return tableFromRows(grid.rows, opts, grid.cols);
+}
+
+/** The empty table, in the one shape everything downstream expects. */
+export function emptyTable() {
+  return { headers: [], rows: [], rowCount: 0, colCount: 0, headerRowCount: 0, hasMerges: false, caption: "" };
+}
+
+/**
+ * Builds a table from a raw grid of strings, deciding whether row 0 is a header.
+ *
+ * Used by the div-grid reader and by the region picker, which both arrive at a
+ * rectangle of text with no markup to tell them what the top row means. The
+ * rule is the same one the DOM extractor uses: short non-numeric labels above
+ * something else are a header.
+ */
+export function tableFromRows(rows, options, colHint) {
+  const opts = { ...DEFAULT_OPTIONS, ...(options || {}) };
+  if (!rows || rows.length === 0) return emptyTable();
+
+  const width = colHint || rows.reduce((m, r) => Math.max(m, r.length), 0);
+  const grid = rows.map((r) => r.concat(new Array(Math.max(0, width - r.length)).fill("")));
 
   const looksNumeric = (s) => s !== "" && /^[-+(]?[$€£¥₹]?\s?[\d,.\s]+%?\)?$/.test(s);
-  const firstHasNumbers = rows[0].some(looksNumeric);
+  const firstHasNumbers = grid[0].some(looksNumeric);
+  const useHeader =
+    opts.inferHeaders && grid.length > 1 && !firstHasNumbers && grid[0].every((s) => String(s).length <= 60);
 
-  if (opts.inferHeaders && rows.length > 1 && !firstHasNumbers && rows[0].every((s) => s.length <= 60)) {
-    headers = uniqueHeaders(rows[0]);
-    body = rows.slice(1);
-  } else {
-    headers = uniqueHeaders(new Array(grid.cols).fill(""));
-    body = rows;
-  }
+  const headers = useHeader ? uniqueHeaders(grid[0]) : uniqueHeaders(new Array(width).fill(""));
+  const body = useHeader ? grid.slice(1) : grid;
 
   return {
+    ...emptyTable(),
     headers,
     rows: body,
     rowCount: body.length,
     colCount: headers.length,
-    headerRowCount: headers.length && body !== rows ? 1 : 0,
-    hasMerges: false,
-    caption: "",
+    headerRowCount: useHeader ? 1 : 0,
   };
 }
 

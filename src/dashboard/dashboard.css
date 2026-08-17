@@ -1,6 +1,6 @@
-/* Editor: a full-height three-band layout — header, work area, export bar.
-   The work area is a fixed-width control column beside a preview that scrolls
-   in both directions, because wide tables are the normal case. */
+/* Editor — a three-band layout: header, work area, export bar.
+   The work area is the only thing that scrolls, and inside it only the grid
+   does, so the controls and the export bar never leave the screen. */
 
 html,
 body {
@@ -18,11 +18,11 @@ body {
 .head {
   display: flex;
   align-items: center;
-  gap: 18px;
-  padding: 10px 18px;
-  border-bottom: 1px solid var(--border);
+  gap: 14px;
+  padding: 9px 16px;
   background: var(--surface);
-  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  flex: none;
 }
 
 .brand {
@@ -30,17 +30,27 @@ body {
   align-items: center;
   gap: 8px;
   font-weight: 700;
-  font-size: 14px;
-  flex-shrink: 0;
+  font-size: 13.5px;
+  letter-spacing: -0.01em;
+  flex: none;
 }
-
 .logo {
-  width: 19px;
-  height: 19px;
+  width: 22px;
+  height: 22px;
+}
+.logo .plate {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 1.4;
+}
+.logo .line {
+  stroke: var(--accent);
+  stroke-width: 1.2;
+  opacity: 0.55;
   fill: none;
-  stroke: var(--neon);
-  stroke-width: 1.7;
-  stroke-linecap: round;
+}
+.logo .row {
+  fill: var(--accent);
 }
 
 .source {
@@ -48,27 +58,31 @@ body {
   flex-direction: column;
   min-width: 0;
   flex: 1;
+  line-height: 1.35;
 }
 .source-title {
-  font-size: 12.5px;
   font-weight: 600;
-  color: var(--text);
+  font-size: 12.5px;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .source-url {
   font-size: 11px;
   color: var(--text-3);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+.source-url:hover {
+  color: var(--accent);
 }
 
 .head-stats {
   display: flex;
+  align-items: center;
   gap: 6px;
-  flex-shrink: 0;
+  flex: none;
 }
 
 /* ── States ──────────────────────────────────────────────────────────────── */
@@ -81,16 +95,13 @@ body {
   justify-content: center;
   gap: 12px;
   color: var(--text-2);
-  text-align: center;
   padding: 40px;
+  text-align: center;
 }
 .state p {
   margin: 0;
   max-width: 460px;
   line-height: 1.6;
-}
-.state-icon {
-  font-size: 30px;
 }
 
 /* ── Layout ──────────────────────────────────────────────────────────────── */
@@ -98,123 +109,75 @@ body {
 .app {
   flex: 1;
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 268px 1fr;
   min-height: 0;
 }
-
-/* ── Control panel ───────────────────────────────────────────────────────── */
 
 .panel {
   border-right: 1px solid var(--border);
   background: var(--surface);
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
+  padding: 4px 0 16px;
 }
 
 .panel-section {
-  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
+  padding: 11px 14px;
+}
+.panel-section > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  margin: -2px 0;
+}
+.panel-section > summary::-webkit-details-marker {
+  display: none;
+}
+.panel-section > summary::before {
+  content: "▸";
+  color: var(--text-3);
+  font-size: 10px;
+  transition: transform 0.15s;
+}
+.panel-section[open] > summary::before {
+  transform: rotate(90deg);
 }
 .panel-section h2 {
   font-size: 11px;
-  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-3);
-  margin: 0 0 9px;
-}
-
-.panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 9px;
-}
-.panel-head h2 {
-  margin: 0;
+  color: var(--text-2);
+  flex: 1;
 }
 .panel-head-actions {
   display: flex;
   gap: 2px;
 }
-.tiny {
-  font-size: 10.5px;
-  padding: 3px 7px;
-}
 
-.columns {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+.panel-section.deep {
+  background: var(--accent-soft);
+  border-bottom-color: var(--accent-line);
 }
-
-.col {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 4px 6px;
-  border-radius: var(--radius-sm);
-  transition: background 0.1s;
-}
-.col:hover {
-  background: var(--surface-2);
-}
-.col.off {
-  opacity: 0.45;
-}
-
-.col input[type="text"] {
-  flex: 1;
-  min-width: 0;
-  font-size: 11.5px;
-  padding: 3px 6px;
-  background: transparent;
-  border-color: transparent;
-}
-.col:hover input[type="text"],
-.col input[type="text"]:focus {
-  background: var(--bg-deep);
-  border-color: var(--border);
-}
-
-.col-type {
-  font-size: 9.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-3);
-  flex-shrink: 0;
-  min-width: 26px;
-  text-align: right;
-}
-.col-type[data-t="number"],
-.col-type[data-t="currency"],
-.col-type[data-t="percent"] {
-  color: var(--neon);
-}
-.col-type[data-t="date"] {
-  color: var(--blue);
-}
-.col-type[data-t="boolean"] {
-  color: var(--yellow);
-}
-.col-type[data-t="url"] {
-  color: var(--purple);
+.panel-section.deep h2 {
+  color: var(--accent);
 }
 
 .opts {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  font-size: 11.5px;
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
 }
 .check.sub {
   padding-left: 21px;
-  font-size: 11px;
+}
+.check.spaced {
+  margin-top: 10px;
+}
+.check input[type="number"] {
+  width: 68px;
 }
 .full {
   width: 100%;
@@ -223,12 +186,108 @@ body {
 
 .hint {
   font-size: 11px;
-  line-height: 1.5;
   color: var(--text-3);
-  margin: 0 0 8px;
+  line-height: 1.5;
+  margin: 8px 0 0;
+}
+.pattern-error {
+  font-size: 11px;
+  color: var(--red);
+  background: var(--red-soft);
+  border-radius: var(--radius-xs);
+  padding: 6px 8px;
+  margin: 0;
+  line-height: 1.5;
 }
 
-/* ── Preview ─────────────────────────────────────────────────────────────── */
+.reset-all {
+  margin: 12px 14px 0;
+}
+
+/* ── Column list ─────────────────────────────────────────────────────────── */
+
+.columns {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.col {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 2px;
+  border-radius: var(--radius-xs);
+  border: 1px solid transparent;
+  background: var(--surface-2);
+}
+.col:hover {
+  border-color: var(--border);
+}
+.col.off {
+  opacity: 0.5;
+}
+.col.dragging {
+  opacity: 0.4;
+}
+.col.drop-before {
+  box-shadow: 0 -2px 0 var(--accent);
+}
+.col.drop-after {
+  box-shadow: 0 2px 0 var(--accent);
+}
+
+.col-handle {
+  cursor: grab;
+  color: var(--text-3);
+  font-size: 11px;
+  padding: 0 2px;
+  user-select: none;
+}
+.col input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  border-color: transparent;
+  background: transparent;
+  padding: 3px 5px;
+  font-size: 12px;
+}
+.col input[type="text"]:hover {
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+.col-type {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  background: var(--surface-3);
+  border-radius: 4px;
+  padding: 2px 5px;
+  cursor: help;
+  flex: none;
+}
+.col-type[data-t="number"],
+.col-type[data-t="currency"],
+.col-type[data-t="percent"] {
+  color: var(--blue);
+  background: var(--blue-soft);
+}
+.col-type[data-t="date"] {
+  color: var(--amber);
+  background: var(--amber-soft);
+}
+.col-type[data-t="boolean"],
+.col-type[data-t="url"] {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* ── Main ────────────────────────────────────────────────────────────────── */
 
 .main {
   display: flex;
@@ -244,91 +303,131 @@ body {
   padding: 9px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
-  flex-shrink: 0;
+  flex: none;
 }
-.toolbar #search {
-  width: 220px;
+.toolbar input[type="search"] {
+  width: 240px;
 }
-.grow {
-  flex: 1;
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 11.5px;
+  border-radius: 999px;
+  padding: 4px 10px;
 }
+.chip:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* ── Grid ────────────────────────────────────────────────────────────────── */
 
 .grid-wrap {
   flex: 1;
   overflow: auto;
   min-height: 0;
+  background: var(--surface);
 }
 
-.grid {
+table.grid {
   border-collapse: separate;
   border-spacing: 0;
   font-size: 12px;
-  font-family: var(--mono);
   width: max-content;
   min-width: 100%;
 }
 
-.grid th,
-.grid td {
-  padding: 5px 10px;
-  border-right: 1px solid var(--border);
+table.grid th,
+table.grid td {
   border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  padding: 5px 10px;
   text-align: left;
   vertical-align: top;
-  max-width: 340px;
+  max-width: 380px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.grid thead th {
+table.grid thead th {
   position: sticky;
   top: 0;
-  z-index: 1;
-  background: var(--surface-3);
+  z-index: 2;
+  background: var(--surface-2);
+  font-weight: 600;
   color: var(--text);
-  font-weight: 700;
-  font-family: var(--sans);
-  font-size: 11.5px;
+  cursor: pointer;
+  user-select: none;
   white-space: nowrap;
 }
+table.grid thead th:hover {
+  background: var(--surface-3);
+}
+table.grid thead th .sort-mark {
+  color: var(--accent);
+  margin-left: 5px;
+  font-size: 10px;
+}
+table.grid thead th[aria-sort="none"] .sort-mark {
+  color: var(--text-3);
+  opacity: 0;
+}
+table.grid thead th:hover .sort-mark {
+  opacity: 1;
+}
 
-/* Row numbers: a narrow, sticky gutter so you keep your place when scrolling
-   a wide table sideways. */
-.grid .rownum {
+table.grid .rownum {
   position: sticky;
   left: 0;
   z-index: 1;
   background: var(--surface-2);
   color: var(--text-3);
   text-align: right;
-  font-size: 10.5px;
-  user-select: none;
-  min-width: 46px;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  padding: 5px 8px;
+  cursor: default;
+  min-width: 44px;
 }
-.grid thead .rownum {
-  z-index: 2;
-}
-
-.grid tbody tr:nth-child(even) td {
-  background: rgba(255, 255, 255, 0.015);
-}
-.grid tbody tr:hover td {
-  background: rgba(168, 85, 247, 0.08);
+table.grid thead .rownum {
+  z-index: 3;
 }
 
-.grid td.num {
+table.grid tbody tr:hover td {
+  background: var(--surface-hover);
+}
+table.grid td.num {
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
-.grid td.empty {
+table.grid td.empty {
+  background: var(--surface-2);
+}
+table.grid tbody tr:hover td.empty {
+  background: var(--surface-3);
+}
+
+.grid-empty {
+  padding: 40px;
+  text-align: center;
   color: var(--text-3);
 }
 
 .grid-note {
-  padding: 10px 14px 18px;
+  flex: none;
+  margin: 0;
+  padding: 7px 14px;
   font-size: 11.5px;
   color: var(--text-3);
-  margin: 0;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
 }
 
 /* ── Export bar ──────────────────────────────────────────────────────────── */
@@ -337,13 +436,12 @@ body {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 10px 18px;
+  padding: 10px 16px;
   border-top: 1px solid var(--border);
   background: var(--surface);
-  flex-shrink: 0;
-  flex-wrap: wrap;
+  flex: none;
+  box-shadow: 0 -1px 0 var(--border);
 }
-
 .fmt,
 .fmt-opts {
   display: flex;
@@ -351,143 +449,76 @@ body {
   gap: 8px;
 }
 .fmt-opts {
-  gap: 14px;
+  flex-wrap: wrap;
 }
-.fmt .hint {
+.exportbar .hint {
   margin: 0;
   max-width: 260px;
 }
 
-.exportbar .status {
-  font-size: 11.5px;
-  color: var(--text-3);
+/* ── Paste dialog ────────────────────────────────────────────────────────── */
+
+.dialog {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+  width: min(94vw, 640px);
 }
-.exportbar .status.ok {
-  color: var(--neon);
+.dialog::backdrop {
+  background: rgba(16, 24, 32, 0.45);
 }
-.exportbar .status.err {
-  color: var(--red);
+.dialog-inner {
+  padding: 18px 20px 16px;
+  display: grid;
+  gap: 10px;
+}
+.dialog-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+.dialog .hint {
+  margin: 0;
+}
+.dialog textarea {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+  background: var(--surface-2);
+}
+.dialog textarea.drop {
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+.dialog-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.dialog-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 2px;
 }
 
-.exportbar button {
-  padding: 8px 18px;
-  font-size: 12.5px;
-}
+/* ── Narrow windows ──────────────────────────────────────────────────────── */
 
-@media (max-width: 900px) {
+@media (max-width: 860px) {
   .app {
-    grid-template-columns: 210px 1fr;
+    grid-template-columns: 1fr;
+  }
+  .panel {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    max-height: 40vh;
   }
   .source {
     display: none;
   }
-}
-
-/* ── Collapsible panel sections ──────────────────────────────────────────── */
-
-details.panel-section > summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-  margin-bottom: 9px;
-}
-details.panel-section > summary::-webkit-details-marker {
-  display: none;
-}
-details.panel-section > summary h2 {
-  margin: 0;
-}
-/* A caret that turns, so the open/closed state is readable at a glance. */
-details.panel-section > summary::after {
-  content: "›";
-  margin-left: auto;
-  color: var(--text-3);
-  font-size: 15px;
-  line-height: 1;
-  transform: rotate(90deg);
-  transition: transform 0.15s;
-}
-details.panel-section[open] > summary::after {
-  transform: rotate(-90deg);
-}
-details.panel-section > summary:hover h2 {
-  color: var(--text-2);
-}
-details.panel-section > summary .panel-head-actions {
-  display: flex;
-  gap: 2px;
-  margin-left: auto;
-}
-
-/* Keep the caret to the right of the buttons rather than between them. */
-details.panel-section > summary .panel-head-actions + ::after {
-  margin-left: 6px;
-}
-
-.panel-section .opts input[type="text"],
-.panel-section .opts input[type="number"] {
-  width: 100%;
-}
-.panel-section .opts .check input[type="number"] {
-  width: 70px;
-}
-
-/* ── Column reorder ──────────────────────────────────────────────────────── */
-
-.col-move {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  flex-shrink: 0;
-  opacity: 0;
-  transition: opacity 0.12s;
-}
-.col:hover .col-move,
-.col:focus-within .col-move {
-  opacity: 1;
-}
-.col-move button {
-  padding: 0;
-  width: 15px;
-  height: 11px;
-  font-size: 7px;
-  line-height: 1;
-  border-radius: 3px;
-  background: var(--surface-3);
-  border: 1px solid var(--border);
-  color: var(--text-3);
-  display: grid;
-  place-items: center;
-}
-.col-move button:hover:not(:disabled) {
-  color: var(--neon);
-  border-color: var(--border-bright);
-  background: var(--surface-3);
-}
-.col-move button:disabled {
-  opacity: 0.25;
-}
-
-/* The type chip carries the column summary in its tooltip, so make it look
-   like something worth hovering. */
-.col-type {
-  cursor: help;
-}
-
-
-/* A refused find pattern. Deliberately loud: the failure mode it replaces was
-   a replace that silently did nothing. */
-.pattern-error {
-  font-size: 11px;
-  line-height: 1.5;
-  color: var(--red);
-  background: rgba(255, 92, 108, 0.1);
-  border: 1px solid rgba(255, 92, 108, 0.3);
-  border-radius: var(--radius-sm);
-  padding: 8px 10px;
-  margin: 4px 0 0;
 }

@@ -1,8 +1,8 @@
-# Chrome Web Store submission — Table Grabber 1.0.0
+# Chrome Web Store submission — Table Grabber 2.0.0
 
 Every field the dashboard asks for, with the value to paste. Work top to bottom.
 
-**Upload:** `dist/table-grabber-1.0.0-webstore.zip` (manifest at the archive
+**Upload:** `dist/table-grabber-2.0.0-webstore.zip` (manifest at the archive
 root — the other ZIP is folder-wrapped for humans and the store will reject it).
 
 Rebuild it with `npm run build` if anything changed.
@@ -24,9 +24,9 @@ Rebuild it with `npm run build` if anything changed.
 
 | Field | Value |
 | --- | --- |
-| ZIP | `dist/table-grabber-1.0.0-webstore.zip` |
+| ZIP | `dist/table-grabber-2.0.0-webstore.zip` |
 | Manifest version | 3 |
-| Version | `1.0.0` |
+| Version | `2.0.0` |
 | Minimum Chrome | 116 |
 
 Each update needs the `version` in `manifest.json` bumped — the store rejects a
@@ -41,9 +41,9 @@ re-upload of a version it already has.
 Table Grabber — Copy & Export Any Table to CSV, Excel, Markdown
 ```
 
-### Summary — short description (109 / 132)
+### Summary — short description (125 / 132)
 ```
-Copy any web table to CSV, Excel, Markdown, JSON, SQL and more. Unlimited rows, no account, nothing uploaded.
+Copy any web table to CSV, Excel, Markdown, JSON, SQL and more. Click it, drag a box round it, or paste it. Nothing uploaded.
 ```
 
 ### Description
@@ -97,7 +97,7 @@ what the misleading-imagery rule is about.
 The store does not have a caption field, so these are for reference if you
 overlay text later:
 
-1. **Point at any table and take it** — the picker highlighting a live table
+1. **Click a table, or drag a box round anything else** — the picker live on a page
 2. **Merged cells come out aligned** — the editor showing the rowspan filled correctly
 3. **Thirteen formats, none of them paid**
 4. **Clean the data before you export it** — numeric values and snake_case headers
@@ -126,7 +126,7 @@ Summary of what you are justifying:
 | `scripting` | Inject the reader into that one tab, on demand |
 | `storage` | Pass the grabbed table to the editor tab, in memory |
 | `downloads` | Save the exported file |
-| `contextMenus` | The single right-click entry |
+| `contextMenus` | The right-click entries: click-pick, box-pick, biggest table, paste |
 
 There are **no host permissions** to justify — say so if asked; it is unusual
 and it helps.
@@ -188,10 +188,10 @@ in a bug report, a GitHub issues link and a contact link.
 
 ## 7. Before you press Submit
 
-- [ ] `npm test` — 94 checks
-- [ ] `npm run e2e` — 56 checks in a real Chrome
+- [ ] `npm test` — 113 checks
+- [ ] `npm run e2e` — 90 checks in a real Chrome
 - [ ] `npm run build` — regenerates the ZIP and its checksum
-- [ ] Load `dist/table-grabber-1.0.0-webstore.zip` unpacked once and click through it
+- [ ] Load `dist/table-grabber-2.0.0-webstore.zip` unpacked once and click through it
 - [ ] Privacy page is live at the URL above
 - [ ] Support anchor scrolls to the right section
 - [ ] Version in `manifest.json` matches this document
@@ -217,7 +217,7 @@ in a bug report, a GitHub issues link and a contact link.
 | Remote code execution | None — no external anything |
 | Missing or unreachable privacy policy | Hosted, in the sitemap, indexable |
 | Description that does not match behaviour | Description written from the actual feature list |
-| Misleading screenshots | All four are unedited captures of the real extension |
+| Misleading screenshots | All five are captures of the real extension; only shot 5's arrangement is assembled, from two real captures |
 | Obfuscated code | Plain readable ES modules, no build step, no minification |
 | Keyword stuffing in the name | Name is a plain description of function |
 | Keyword stuffing in the description | **Rejected once on this, 2026-08-14.** See below |

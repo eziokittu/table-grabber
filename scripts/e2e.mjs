@@ -335,6 +335,12 @@ if (paged) {
   const can = await relay({ type: "canPaginate", id: paged.id });
   check("next control detected", can?.can === true, JSON.stringify(can));
 
+  // ...and not attributed to a table on the other side of the page.
+  if (mergedSummary) {
+    const other = await relay({ type: "canPaginate", id: mergedSummary.id });
+    check("another table's pager is not claimed as this one's", other?.can === false, JSON.stringify(other));
+  }
+
   const walked = await relay({ type: "deepCapture", id: paged.id, mode: "paginate", options: {} });
   check("pagination capture ran", walked?.ok === true, JSON.stringify(walked));
   if (walked?.ok) {
@@ -344,7 +350,232 @@ if (paged) {
   }
 }
 
-// ── 10. The editor ─────────────────────────────────────────────────────────
+// ── 10. The picker ─────────────────────────────────────────────────────────
+//
+// Everything here is dispatched as real input through CDP, because the whole
+// class of bug this replaced — a Cancel button that could not be clicked, a
+// pick that vanished with the popup, a page that navigated out from under the
+// selection — only shows up against genuine events.
+console.log("\nPicker");
+
+const demoTarget = (await send("Target.getTargets")).targetInfos.find(
+  (t) => t.type === "page" && t.url.startsWith(DEMO)
+);
+const pageSession = await attach(demoTarget.targetId);
+watchConsole(pageSession, "page");
+
+async function mouse(type, x, y, buttons) {
+  await send(
+    "Input.dispatchMouseEvent",
+    { type, x, y, button: "left", buttons: buttons ?? 0, clickCount: 1 },
+    pageSession
+  );
+}
+async function clickAt(x, y) {
+  await mouse("mouseMoved", x, y, 0);
+  await sleep(60);
+  await mouse("mousePressed", x, y, 1);
+  await mouse("mouseReleased", x, y, 0);
+  await sleep(200);
+}
+async function pressEscape() {
+  for (const type of ["keyDown", "keyUp"]) {
+    await send("Input.dispatchKeyEvent", { type, key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 }, pageSession);
+  }
+  await sleep(200);
+}
+
+/** Reads the overlay's shadow DOM, which is the only place its UI exists. */
+const readOverlay = () =>
+  evaluate(
+    pageSession,
+    `(() => {
+       const host = document.getElementById("__table-grabber-ui");
+       if (!host) return { present: false };
+       const s = host.shadowRoot;
+       const sheet = s.querySelector(".sheet");
+       return {
+         present: true,
+         bar: !!s.querySelector(".bar"),
+         band: s.querySelector(".band")?.hidden === false,
+         barButtons: [...s.querySelectorAll(".bar button")].map(b => b.textContent),
+         tag: s.querySelector(".tag")?.hidden === false ? s.querySelector(".tag").textContent : null,
+         sheet: sheet && {
+           title: sheet.querySelector(".sheet-title")?.textContent || "",
+           message: sheet.querySelector(".msg")?.textContent || "",
+           choices: [...sheet.querySelectorAll(".choice")].map(c => c.textContent),
+           actions: [...sheet.querySelectorAll(".sheet-foot button")].map(b => b.textContent)
+         }
+       };
+     })()`
+  );
+
+/** Where a fixture element is on screen, after scrolling it into view. */
+const rectOfSelector = (selector, index = 0) =>
+  evaluate(
+    pageSession,
+    `(() => {
+       const el = document.querySelectorAll(${JSON.stringify(selector)})[${index}];
+       if (!el) return null;
+       el.scrollIntoView({ block: "center" });
+       const r = el.getBoundingClientRect();
+       return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, x: r.left + r.width / 2, y: r.top + r.height / 2 };
+     })()`
+  );
+
+{
+  const started = await relay({ type: "pick", mode: "element" });
+  check("picker starts on demand", started?.started === true, JSON.stringify(started));
+
+  await sleep(300);
+  let ui = await readOverlay();
+  check("overlay is drawn", ui.present === true);
+  check("the control bar offers a Cancel button", (ui.barButtons || []).includes("Cancel"), JSON.stringify(ui.barButtons));
+
+  // The bar lives in a shadow root inside the page, so its own click has to
+  // survive the capture-phase listeners that swallow every other click.
+  await evaluate(
+    pageSession,
+    `document.getElementById("__table-grabber-ui").shadowRoot.querySelector(".bar button.act").click()`
+  );
+  await sleep(200);
+  ui = await readOverlay();
+  check("Cancel actually cancels", ui.present === false);
+
+  const state = await relay({ type: "state" });
+  check("picking state is cleared after cancelling", state?.picking === false, JSON.stringify(state));
+}
+
+{
+  await relay({ type: "pick", mode: "element" });
+  await sleep(200);
+  await pressEscape();
+  const ui = await readOverlay();
+  check("Escape cancels too", ui.present === false);
+}
+
+{
+  // Table 3 has links in it. Clicking one while picking must select the table
+  // rather than navigating away with the grab.
+  const before = await evaluate(pageSession, `location.href`);
+  await relay({ type: "pick", mode: "element" });
+  await sleep(200);
+
+  const link = await rectOfSelector("table a[href]", 0);
+  await mouse("mouseMoved", link.x, link.y, 0);
+  await sleep(150);
+  const hovering = await readOverlay();
+  check("hovering labels what will be grabbed", /rows ×/.test(hovering.tag || ""), JSON.stringify(hovering.tag));
+
+  await clickAt(link.x, link.y);
+  const after = await evaluate(pageSession, `location.href`);
+  check("clicking a link while picking does not navigate", after === before, after);
+
+  const ui = await readOverlay();
+  check("a pick ends in the result sheet", !!ui.sheet, JSON.stringify(ui).slice(0, 160));
+  check("the sheet reports the shape", /rows × \d+ cols/.test(ui.sheet?.title || ""), ui.sheet?.title);
+  check("the sheet offers the editor", (ui.sheet?.actions || []).some((a) => /editor/i.test(a)), JSON.stringify(ui.sheet?.actions));
+
+  // The flow that used to be impossible: the page hands its grab to the editor
+  // on its own, with no popup left alive to relay it.
+  await evaluate(
+    pageSession,
+    `(() => {
+       const buttons = [...document.getElementById("__table-grabber-ui").shadowRoot.querySelectorAll(".sheet-foot button")];
+       buttons.find(b => /editor/i.test(b.textContent)).click();
+       return true;
+     })()`
+  );
+  await sleep(1800);
+
+  // Asserted through CDP rather than chrome.tabs.query: with no host
+  // permissions the extension cannot see most tab URLs, so a query from the
+  // service worker reports the new tab with a null address and looks like a
+  // failure that is not one.
+  const dashTargets = (await send("Target.getTargets")).targetInfos.filter(
+    (t) => t.type === "page" && t.url.includes("dashboard.html")
+  );
+  check("the page opens the editor by itself", dashTargets.length === 1, JSON.stringify(dashTargets.map((t) => t.url)));
+  check(
+    "the editor is told which tab and table it came from",
+    /tab=\d+&id=/.test(dashTargets[0]?.url || ""),
+    dashTargets[0]?.url
+  );
+
+  // Leave the browser as it was found, so the editor section below opens the
+  // one tab it expects.
+  for (const t of dashTargets) await send("Target.closeTarget", { targetId: t.targetId });
+  await sleep(400);
+
+  check("the overlay closes once the editor has it", (await readOverlay()).present === false);
+}
+
+{
+  // Picking something that is not a table used to do nothing at all, silently,
+  // with no way out but a reload.
+  await relay({ type: "pick", mode: "element" });
+  await sleep(200);
+  const heading = await rectOfSelector("h2", 0);
+  await clickAt(heading.x, heading.y);
+
+  const ui = await readOverlay();
+  check("a non-table pick still ends in a sheet", !!ui.sheet, JSON.stringify(ui).slice(0, 160));
+  check("it says why", /table-shaped/i.test(ui.sheet?.title || ""), ui.sheet?.title);
+  check("it offers a way out", (ui.sheet?.actions || []).length >= 2, JSON.stringify(ui.sheet?.actions));
+
+  const state = await relay({ type: "state" });
+  check("a failed pick does not leave the picker running", state?.picking === false, JSON.stringify(state));
+
+  // "Pick again" from a sheet: the restarted picker must own the overlay
+  // outright, rather than sharing it with the dismissed sheet's key handler.
+  await evaluate(
+    pageSession,
+    `(() => {
+       const buttons = [...document.getElementById("__table-grabber-ui").shadowRoot.querySelectorAll(".sheet-foot button")];
+       buttons.find(b => /Pick again/i.test(b.textContent)).click();
+       return true;
+     })()`
+  );
+  await sleep(500);
+  const restarted = await readOverlay();
+  check("Pick again restarts the picker", restarted.bar === true && !restarted.sheet, JSON.stringify(restarted).slice(0, 140));
+
+  await pressEscape();
+  check("the restarted picker still cancels cleanly", (await readOverlay()).present === false);
+}
+
+{
+  // Drag a box across the bottom-right of the merged table: part of it, so the
+  // sheet has to offer both readings.
+  await relay({ type: "pick", mode: "region" });
+  await sleep(200);
+
+  const t = await rectOfSelector("table", 0);
+  const x1 = t.left + (t.right - t.left) * 0.45;
+  const y1 = t.top + (t.bottom - t.top) * 0.55;
+  const x2 = t.right - 3;
+  const y2 = t.bottom - 3;
+
+  await mouse("mouseMoved", x1, y1, 0);
+  await mouse("mousePressed", x1, y1, 1);
+  await mouse("mouseMoved", (x1 + x2) / 2, (y1 + y2) / 2, 1);
+  await mouse("mouseMoved", x2, y2, 1);
+  await sleep(100);
+  check("the box is drawn while dragging", (await readOverlay()).band === true);
+  await mouse("mouseReleased", x2, y2, 0);
+  await sleep(400);
+
+  const ui = await readOverlay();
+  const choices = ui.sheet?.choices || [];
+  check("a region drag ends in a sheet", !!ui.sheet, JSON.stringify(ui).slice(0, 160));
+  check("a partial box offers the part it covered", choices.some((c) => /Selected part/.test(c)), JSON.stringify(choices));
+  check("a partial box also offers the whole table", choices.some((c) => /Whole table/.test(c)), JSON.stringify(choices));
+
+  await pressEscape();
+  check("the overlay is gone afterwards", (await readOverlay()).present === false);
+}
+
+// ── 11. The editor ─────────────────────────────────────────────────────────
 console.log("\nEditor");
 const grabTarget = mergedSummary || tables[0];
 const openedUrl = await evaluate(
@@ -467,9 +698,52 @@ if (dash) {
 
   const stateAfterReset = await evaluate(dashSession, `document.getElementById("stat-rows").textContent`);
   check("clearing the filter restores every row", stateAfterReset.startsWith("4"), stateAfterReset);
+
+  // Sorting by clicking the header: up, down, off.
+  const sorting = await evaluate(
+    dashSession,
+    `(() => {
+       const cell = () => document.querySelector("#grid-body tr td:nth-child(4)").textContent;
+       // The header row is rebuilt on every recompute, so each click has to
+       // find the current node rather than reuse a detached one.
+       const head = () => document.querySelectorAll("#grid-head th")[3];
+       head().click();
+       const asc = cell();
+       const ascMark = head().getAttribute("aria-sort");
+       head().click();
+       const desc = cell();
+       head().click();
+       return { asc, desc, ascMark, chipHidden: document.getElementById("sort-chip").hidden };
+     })()`
+  );
+  check("clicking a header sorts ascending by value", sorting.asc === "$800", JSON.stringify(sorting));
+  check("clicking again sorts descending", sorting.desc === "$2,400", JSON.stringify(sorting));
+  check("the header reports its sort state", sorting.ascMark === "ascending", sorting.ascMark);
+  check("a third click clears the sort", sorting.chipHidden === true, JSON.stringify(sorting));
+
+  // Paste is a first-class way in, not just a fallback.
+  const pasted = await evaluate(
+    dashSession,
+    `(() => {
+       document.getElementById("open-paste").click();
+       document.getElementById("paste-text").value = "name,qty\\nBolt,5\\nNut,7";
+       document.getElementById("paste-go").click();
+       return {
+         rows: document.getElementById("stat-rows").textContent,
+         cols: document.getElementById("stat-cols").textContent,
+         header: document.querySelectorAll("#grid-head th")[1]?.textContent || "",
+         dialogOpen: document.getElementById("paste-dialog").open,
+         deepHidden: document.getElementById("deep-section").hidden
+       };
+     })()`
+  );
+  check("pasted CSV becomes the table", pasted.rows.startsWith("2") && pasted.cols.startsWith("2"), JSON.stringify(pasted));
+  check("pasted CSV keeps its header row", pasted.header.startsWith("name"), JSON.stringify(pasted.header));
+  check("the paste dialog closes on success", pasted.dialogOpen === false);
+  check("deep capture is hidden for pasted data", pasted.deepHidden === true);
 }
 
-// ── 11. Console hygiene ────────────────────────────────────────────────────
+// ── 12. Console hygiene ────────────────────────────────────────────────────
 console.log("\nConsole");
 await sleep(500);
 // Chrome logs a benign warning when a service worker is attached by CDP.

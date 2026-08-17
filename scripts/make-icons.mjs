@@ -19,11 +19,16 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SIZES = [16, 32, 48, 128];
 
 // ── Palette ────────────────────────────────────────────────────────────────
-const PLATE_TOP = [42, 11, 74];   // #2a0b4a
-const PLATE_BOT = [16, 4, 30];    // #10041e
-const NEON = [57, 255, 20];       // #39ff14
-const PURPLE = [168, 85, 247];    // #a855f7
-const PURPLE_DIM = [124, 58, 237];
+//
+// Teal plate, light grid, one amber row being pulled out. Deliberately nothing
+// like glitchbong.com's purple and neon green: this is a tool that sits in a
+// toolbar next to a spreadsheet, and it should read as its own thing at 16px on
+// both a light and a dark browser chrome.
+const PLATE_TOP = [24, 145, 134];  // #189186
+const PLATE_BOT = [11, 90, 84];    // #0b5a54
+const GRABBED = [255, 200, 87];    // #ffc857
+const LIGHT = [236, 250, 248];     // #ecfaf8
+const LIGHT_DIM = [176, 219, 214];
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const mix = (a, b, t) => [
@@ -71,42 +76,42 @@ function sample(x, y, size) {
   let rgb = mix(PLATE_TOP, PLATE_BOT, clamp(y * 1.1, 0, 1));
 
   if (small) {
-    // 16px: three fat bars. Header purple, one body bar dim, the last neon and
-    // nudged right so the "pulled out" idea survives at this size.
+    // 16px: three fat bars. Header light, one body bar dimmer, the last amber
+    // and nudged right so the "pulled out" idea survives at this size.
     const bar = (cy, w, off) => sdRoundRect(x, y, 0.5 + off, cy, w, 0.075, 0.035);
-    rgb = over(rgb, PURPLE, cover(bar(0.28, 0.3, 0), aa));
-    rgb = over(rgb, PURPLE_DIM, cover(bar(0.5, 0.3, 0), aa) * 0.85);
-    rgb = over(rgb, NEON, cover(bar(0.72, 0.28, 0.06), aa));
+    rgb = over(rgb, LIGHT, cover(bar(0.28, 0.3, 0), aa));
+    rgb = over(rgb, LIGHT_DIM, cover(bar(0.5, 0.3, 0), aa) * 0.85);
+    rgb = over(rgb, GRABBED, cover(bar(0.72, 0.28, 0.06), aa));
     return [...rgb.map((c) => clamp(c, 0, 255)), Math.round(plateA * 255)];
   }
 
   // Table outline
   const outer = sdRoundRect(x, y, 0.47, 0.5, 0.29, 0.31, 0.05);
   const ring = Math.abs(outer) - 0.022;
-  rgb = over(rgb, PURPLE, cover(ring, aa) * 0.95);
+  rgb = over(rgb, LIGHT, cover(ring, aa) * 0.95);
 
   // Header band
   const header = sdRoundRect(x, y, 0.47, 0.29, 0.29, 0.10, 0.05);
-  rgb = over(rgb, PURPLE, cover(header, aa) * 0.5);
+  rgb = over(rgb, LIGHT, cover(header, aa) * 0.35);
 
   // Header underline
   const underline = sdRoundRect(x, y, 0.47, 0.385, 0.29, 0.012, 0.006);
-  rgb = over(rgb, PURPLE, cover(underline, aa));
+  rgb = over(rgb, LIGHT, cover(underline, aa));
 
   // Two dim body rows. No column divider: at 32px it collapses into the rows
   // and the whole mark turns to mush.
   const row1 = sdRoundRect(x, y, 0.47, 0.50, 0.235, 0.040, 0.02);
-  rgb = over(rgb, PURPLE_DIM, cover(row1, aa) * 0.75);
+  rgb = over(rgb, LIGHT_DIM, cover(row1, aa) * 0.8);
   const row2 = sdRoundRect(x, y, 0.47, 0.60, 0.235, 0.040, 0.02);
-  rgb = over(rgb, PURPLE_DIM, cover(row2, aa) * 0.45);
+  rgb = over(rgb, LIGHT_DIM, cover(row2, aa) * 0.5);
 
-  // The grabbed row: neon, wider, shifted right and out past the table edge.
+  // The grabbed row: amber, wider, shifted right and out past the table edge.
   const grabbed = sdRoundRect(x, y, 0.60, 0.71, 0.30, 0.062, 0.03);
   const grabbedA = cover(grabbed, aa);
   // A soft glow sells it as lifted off the surface.
   const glow = cover(sdRoundRect(x, y, 0.60, 0.71, 0.32, 0.082, 0.04), aa * 3);
-  rgb = over(rgb, NEON, glow * 0.22);
-  rgb = over(rgb, NEON, grabbedA);
+  rgb = over(rgb, GRABBED, glow * 0.22);
+  rgb = over(rgb, GRABBED, grabbedA);
 
   return [...rgb.map((c) => clamp(c, 0, 255)), Math.round(plateA * 255)];
 }

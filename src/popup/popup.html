@@ -10,15 +10,46 @@
     <header class="head">
       <div class="brand">
         <svg class="logo" viewBox="0 0 24 24" aria-hidden="true">
-          <rect x="2.5" y="4" width="19" height="16" rx="2.5" />
-          <line x1="2.5" y1="9.5" x2="21.5" y2="9.5" />
-          <line x1="9" y1="9.5" x2="9" y2="20" />
-          <line x1="15" y1="9.5" x2="15" y2="20" />
+          <rect class="plate" x="2" y="3.5" width="20" height="17" rx="3" />
+          <path class="line" d="M2 9.25h20M8.5 9.25V20.5M15.5 9.25V20.5" />
+          <rect class="row" x="5" y="14.5" width="17" height="4.4" rx="1.6" />
         </svg>
         <span>Table Grabber</span>
       </div>
-      <button id="rescan" class="btn-ghost" title="Scan the page again">Rescan</button>
+      <button id="rescan" class="btn-ghost btn-tiny" title="Scan the page again">Rescan</button>
     </header>
+
+    <!-- Always available, whatever the scan found -->
+    <div class="actions">
+      <button id="pick" class="btn-primary act-big">
+        <span class="act-icon" aria-hidden="true">⌖</span>
+        <span>
+          <strong>Click a table</strong>
+          <small>Point at anything on the page</small>
+        </span>
+      </button>
+      <button id="region" class="act-big">
+        <span class="act-icon" aria-hidden="true">▧</span>
+        <span>
+          <strong>Drag a box</strong>
+          <small>Grab an area, table or not</small>
+        </span>
+      </button>
+      <button id="paste" class="act-big">
+        <span class="act-icon" aria-hidden="true">⎗</span>
+        <span>
+          <strong>Paste data</strong>
+          <small>CSV, TSV, JSON, Markdown, HTML</small>
+        </span>
+      </button>
+    </div>
+
+    <!-- Picking is running on the page -->
+    <div id="picking" class="banner" hidden>
+      <span class="dot"></span>
+      <span class="grow">Picking on the page…</span>
+      <button id="cancel-pick" class="btn-tiny">Cancel</button>
+    </div>
 
     <!-- Scanning -->
     <div id="loading" class="state">
@@ -28,52 +59,50 @@
 
     <!-- Page cannot be read -->
     <div id="blocked" class="state" hidden>
-      <span class="state-icon" aria-hidden="true">🚫</span>
       <p id="blocked-msg">Chrome does not allow extensions to run on this page.</p>
-      <p class="muted small">Open a normal website and try again.</p>
+      <p class="muted small">Open a normal website and try again — or paste the data instead.</p>
     </div>
 
     <!-- Nothing found -->
     <div id="empty" class="state" hidden>
-      <span class="state-icon" aria-hidden="true">🔍</span>
-      <p>No tables found on this page.</p>
+      <p><strong>No ready-made tables here.</strong></p>
       <p class="muted small">
-        Some sites draw tables out of plain boxes. Point at one yourself and it will still be read.
+        Plenty of pages lay tables out with plain boxes. Click one or drag a box around it and it
+        will still be read.
       </p>
-      <button id="pick-empty" class="btn-purple">Pick a table by clicking</button>
     </div>
 
     <!-- Results -->
     <main id="results" hidden>
       <div class="summary">
-        <span id="count" class="pill pill-neon">0 tables</span>
-        <button id="pick" class="btn-ghost" title="Click a table on the page to select it">
-          <span aria-hidden="true">🎯</span> Pick one
-        </button>
+        <span id="count" class="pill pill-accent">0 tables</span>
+        <span class="muted small">biggest first</span>
       </div>
       <ul id="list" class="list"></ul>
     </main>
 
     <footer class="foot">
       <span id="status" class="status" role="status" aria-live="polite"></span>
+      <span class="grow"></span>
       <a href="https://glitchbong.com/tools/table-grabber" target="_blank" rel="noopener">Guide</a>
     </footer>
 
     <template id="row-template">
       <li class="item">
-        <button class="item-main" type="button">
+        <button class="item-main" type="button" title="Show me where this is on the page">
           <span class="item-head">
             <span class="item-label"></span>
             <span class="item-badges"></span>
           </span>
           <span class="item-dims mono"></span>
-          <span class="item-preview mono"></span>
+          <span class="item-preview"></span>
         </button>
         <div class="item-actions">
           <button class="act" data-act="csv" title="Copy as CSV">CSV</button>
           <button class="act" data-act="tsv" title="Copy as TSV — pastes into Sheets and Excel as cells">TSV</button>
           <button class="act" data-act="markdown" title="Copy as Markdown">MD</button>
-          <button class="act act-open btn-purple" data-act="open" title="Open in the editor">Open →</button>
+          <span class="grow"></span>
+          <button class="act act-open btn-soft" data-act="open" title="Open in the editor">Open →</button>
         </div>
       </li>
     </template>
