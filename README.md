@@ -8,7 +8,7 @@ A Chrome extension, MIT licensed, with no server, no account and no network
 code of any kind.
 
 - **Tool page:** <https://glitchbong.com/tools/table-grabber>
-- **Chrome Web Store:** *(pending review)*
+- **Chrome Web Store:** <https://chromewebstore.google.com/detail/table-grabber-%E2%80%94-copy-expo/abkbielgiijjmcboeehkbeinfmialime>
 
 ---
 
@@ -105,7 +105,11 @@ Multi-row headers are stacked into one name, so a grouped header reads
 
 ### From the Chrome Web Store
 
-*(link pending review)*
+One click, and Chrome keeps it updated:
+<https://chromewebstore.google.com/detail/table-grabber-%E2%80%94-copy-expo/abkbielgiijjmcboeehkbeinfmialime>
+
+Every Chromium browser installs from the same listing — Edge, Brave, Opera, Arc
+and Vivaldi included.
 
 ### From source
 
